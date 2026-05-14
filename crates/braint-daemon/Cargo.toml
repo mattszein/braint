@@ -7,6 +7,9 @@ edition.workspace = true
 name = "braintd"
 path = "src/main.rs"
 
+[dev-dependencies]
+tempfile = { workspace = true }
+
 [dependencies]
 braint-client = { path = "../braint-client" }
 braint-core = { path = "../braint-core" }
@@ -19,3 +22,5 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "si
 interprocess = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
