@@ -2,6 +2,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 // NOTE: Manual framing is 20 lines and zero extra deps.
 // TODO(phase-2): Evaluate tokio-util::codec::LengthDelimitedCodec when subscriptions arrive.
+// TODO(phase-4a): Inspect rmcp's stdio transport for plugin IPC framing — may unify with this.
 
 pub async fn write_frame<W: AsyncWriteExt + Unpin>(
     writer: &mut W,

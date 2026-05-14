@@ -11,7 +11,8 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     loop {
         let stream = listener.accept().await?;
-        // Phase 1: sequential handling. Phase 2+ will spawn per-connection tasks.
+        // NOTE(debt-5): Phase 1 uses sequential handling.
+        // Phase 2+ will spawn per-connection tasks with Arc<Mutex<Storage>>.
         if let Err(e) = connection::handle_connection(stream, &mut handler).await {
             tracing::warn!("connection error: {e}");
         }

@@ -409,6 +409,20 @@ Real gotchas that surfaced during implementation. Update this as new phases teac
 
 ---
 
+## Technical Debt Register
+
+Debt items discovered during implementation, scheduled for cleanup. Update phase numbers when they land.
+
+| # | Debt | Phase to fix | Reason | Current workaround |
+|---|------|-------------|--------|-------------------|
+| 1 | **Framing refactor** | 2 or 4a | Manual `read_frame`/`write_frame` is 20 lines but lacks buffering, backpressure, and stream combinators. `tokio-util::codec::LengthDelimitedCodec` or `rmcp`'s stdio transport (for plugin IPC) may replace it. | Manual framing works fine for one request/response. |
+| 2 | **Eliminate `unwrap`/`expect`** | 2 | Production code has `unwrap()` in `main.rs` (temp dir) and test helpers. Phase 2 adds config loading, verb parsing, and confirmation flows — all new failure modes that need proper handling. | Acceptable for Phase 1 skeleton; will be audited in Phase 2. |
+| 3 | **Structured error taxonomy** | 2 | Daemon errors are generic strings. CLI can't distinguish "disk full" from "bad parse." Need JSON-RPC error code ranges mapped to daemon error variants. | All errors map to `-32000` / `-32001` for now. |
+| 4 | **Socket graceful shutdown** | 2 | Daemon deletes stale socket on startup but doesn't catch `SIGTERM`/`SIGINT` to clean up on exit. | `remove_file` on startup handles dev-loop crashes. |
+| 5 | **Connection concurrency** | 2 | Phase 1 handles one connection at a time. Phase 2 TUI + CLI simultaneous use requires per-connection tasks + `Arc<Mutex<Storage>>`. | Sequential `accept()` loop. |
+
+---
+
 ## Versioning & Evolution
 
 - These conventions apply from Phase 1 onward.
