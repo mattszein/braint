@@ -1,0 +1,58 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Rust (edition 2024), tokio, serde, rusqlite, interprocess, clap, ratatui
+  Architecture: Cargo workspace with crates proto, core, storage, client, daemon, cli, plugin-sdk
+  Testing: cargo test (built-in), cargo clippy, cargo fmt
+  Style: Domain pure in core, I/O at edges; JSON-RPC 2.0 over local sockets; NDJSON CLI output
+  Product: Personal Daemon — background service for capture, tasks, notes, focus, triage, breakdown
+  Persistence: hybrid (engram + openspec)
+
+strict_tdd: true
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected crates/modules
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns and conventions
+    - Load relevant coding skills for the project stack
+    - Core crate stays sync and pure — no tokio, no SQLite, no sockets
+  verify:
+    - Run `cargo test` if test infrastructure exists
+    - Run `cargo clippy -- -D warnings` before considering done
+    - Compare implementation against every spec scenario
+  archive:
+    - Warn before merging destructive deltas (large removals)
+
+testing:
+  strict_tdd: enabled
+  detected: 2026-05-14
+
+  runner:
+    command: cargo test
+    framework: cargo (built-in)
+
+  layers:
+    unit: { available: true, tool: cargo test }
+    integration: { available: true, tool: cargo test --test integration }
+    e2e: { available: false, tool: ~ }
+
+  coverage:
+    available: false
+    command: ~
+
+  quality:
+    linter: { available: true, command: cargo clippy -- -D warnings }
+    type_checker: { available: true, command: cargo check }
+    formatter: { available: true, command: cargo fmt }

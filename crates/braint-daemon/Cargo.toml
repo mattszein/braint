@@ -1,0 +1,21 @@
+[package]
+name = "braint-daemon"
+version = "0.1.0"
+edition.workspace = true
+
+[[bin]]
+name = "braintd"
+path = "src/main.rs"
+
+[dependencies]
+braint-client = { path = "../braint-client" }
+braint-core = { path = "../braint-core" }
+braint-proto = { path = "../braint-proto" }
+braint-storage = { path = "../braint-storage" }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "signal", "process"] }
+interprocess = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

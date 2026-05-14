@@ -1,0 +1,2 @@
+# Allow certain lints that are too noisy for this project
+# See https://doc.rust-lang.org/clippy/lint_configuration.html
