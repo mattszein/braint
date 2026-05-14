@@ -4,47 +4,55 @@
 
 ### Infrastructure
 
-- [ ] 1.1 Convert root to workspace manifest
+- [x] 1.1 Convert root to workspace manifest
   - Delete `src/`
   - Replace root `Cargo.toml` with workspace manifest
   - Add `[workspace.dependencies]` with pinned versions
 
-- [ ] 1.2 Create empty crates
+- [x] 1.2 Create empty crates (6 crates)
   - `cargo new --lib crates/braint-proto`
   - `cargo new --lib crates/braint-core`
-  - `cargo new --lib crates/braint-storage`
   - `cargo new --lib crates/braint-client`
+  - `cargo new --lib crates/braint-plugin-sdk`
   - `cargo new --bin crates/braint-daemon`
   - `cargo new --bin crates/braint-cli`
-  - `cargo new --lib crates/braint-plugin-sdk`
-  - `cargo new --bin crates/xtask`
+  - ~~`cargo new --lib crates/braint-storage`~~ → REMOVED: storage lives as module inside daemon
+  - ~~`cargo new --bin crates/xtask`~~ → REMOVED: replaced by justfile
 
-- [ ] 1.3 Wire crate dependencies
+- [x] 1.3 Wire crate dependencies
   - Each crate's `Cargo.toml` references workspace deps
-  - Set up inter-crate dependencies per design
+  - Set up inter-crate dependencies per design (6-crate graph)
 
-- [ ] 1.4 Add toolchain and quality configs
+- [x] 1.4 Add toolchain and quality configs
   - `rust-toolchain.toml`
   - `rustfmt.toml`
   - `clippy.toml`
-  - `.cargo/config.toml` (xtask alias)
+  - ~~`.cargo/config.toml` (xtask alias)~~ → REMOVED: xtask not used
 
-- [ ] 1.5 Configure CI
+- [x] 1.5 Add justfile
+  - `just check` runs fmt + clippy + test
+  - `just build`, `just test`, `just dev`, `just cli`
+
+- [x] 1.6 Configure CI
   - `.github/workflows/ci.yml`
   - Linux + macOS matrix
   - build, test, clippy, fmt-check
 
-- [ ] 1.6 Add README and gitignore
+- [x] 1.7 Add README and gitignore
   - One-paragraph elevator pitch
   - "Status: pre-alpha" banner
   - `.gitignore` updated
 
-- [ ] 1.7 Verify clean build
+- [x] 1.8 Create daemon storage module placeholder
+  - `crates/braint-daemon/src/lib.rs` exposes `pub mod storage`
+  - `crates/braint-daemon/src/storage/mod.rs` placeholder
+
+- [x] 1.9 Verify clean build
   - `cargo build` succeeds
   - `cargo test` passes (0 tests)
   - `cargo clippy -- -D warnings` clean
   - `cargo fmt --check` clean
 
-- [ ] 1.8 Commit and push
+- [x] 1.10 Commit and push
   - All files staged
   - CI runs and passes

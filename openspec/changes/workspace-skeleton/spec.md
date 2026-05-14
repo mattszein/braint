@@ -7,17 +7,15 @@
 **When** `cargo build` is run  
 **Then** all workspace members compile successfully with zero errors
 
-### R2 — Crate Graph
+### R2 — Crate Graph (6 crates)
 **Given** the workspace members  
 **Then** the dependency graph MUST be acyclic:
 - `proto` depends on nothing
 - `core` depends on `proto`
-- `storage` depends on `core`
 - `client` depends on `proto`
-- `daemon` depends on `proto`, `core`, `storage`, `client`
-- `cli` depends on `proto`, `client`, `core`
 - `plugin-sdk` depends on `proto`
-- `xtask` depends on nothing (build automation)
+- `daemon` depends on `proto`, `core`, `client` (and contains `storage` as a module)
+- `cli` depends on `proto`, `client`, `core`
 
 ### R3 — Shared Dependencies
 **Given** the root Cargo.toml  
@@ -32,9 +30,9 @@
 **When** CI runs  
 **Then** `cargo clippy -- -D warnings` and `cargo fmt --check` MUST pass on Linux and macOS
 
-### R6 — xtask
-**Given** `.cargo/config.toml`  
-**Then** `cargo xtask <command>` MUST work as an alias for `cargo run --package xtask -- <command>`
+### R6 — justfile
+**Given** a `justfile` in the repo root  
+**Then** common commands (`just check`, `just build`, `just test`) MUST work
 
 ## Scenarios
 

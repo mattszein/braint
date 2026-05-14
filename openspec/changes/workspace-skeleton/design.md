@@ -14,6 +14,12 @@ The project started with edition 2024. We keep it. All member crates inherit edi
 ### AD4 — Empty Crates
 Phase 0 crates compile but contain only stub `lib.rs` / `main.rs`. Real code lands in subsequent phases.
 
+### AD5 — Storage as Module (not Crate)
+Storage starts as `daemon/src/storage/` module. It is SQLite-only, daemon-adjacent, and not reused by other crates in Phase 0–1. If it later needs independence (shared by cli, used in tests without daemon binary), promote to crate — the move is mechanical in Rust.
+
+### AD6 — justfile over xtask
+A `justfile` covers common commands (`just check`, `just dev`) without an extra crate. Migrate to `xtask` only if build automation grows complex enough to justify it.
+
 ## File Layout
 
 ```
@@ -22,9 +28,7 @@ braint/
 ├── rust-toolchain.toml
 ├── rustfmt.toml
 ├── clippy.toml
-├── .gitignore
-├── .cargo/
-│   └── config.toml            # xtask alias
+├── justfile                   # Common commands
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
@@ -35,40 +39,36 @@ braint/
 │   ├── core/
 │   │   └── Cargo.toml
 │   │   └── src/lib.rs
-│   ├── storage/
-│   │   └── Cargo.toml
-│   │   └── src/lib.rs
 │   ├── client/
 │   │   └── Cargo.toml
 │   │   └── src/lib.rs
 │   ├── daemon/
 │   │   └── Cargo.toml
 │   │   └── src/main.rs
+│   │   └── src/lib.rs        # exposes storage module
+│   │   └── src/storage/
+│   │       └── mod.rs        # SQLite persistence
 │   ├── cli/
 │   │   └── Cargo.toml
 │   │   └── src/main.rs
-│   ├── plugin-sdk/
-│   │   └── Cargo.toml
-│   │   └── src/lib.rs
-│   └── xtask/
+│   └── plugin-sdk/
 │       └── Cargo.toml
-│       └── src/main.rs
+│       └── src/lib.rs
 └── README.md
 ```
 
 ## Dependency Graph
 
 ```
-proto ← core ← storage
-  ↑           ↑
+proto ← core
+  ↑           
   └────── client
               ↑
-         daemon (depends on all)
+         daemon (depends on proto, core, client; contains storage module)
               ↑
   cli ────────┘ (depends on proto, client, core)
 
 plugin-sdk → proto
-xtask → (none)
 ```
 
 ## CI Matrix

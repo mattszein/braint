@@ -130,8 +130,8 @@ dependencies = [
  "braint-client",
  "braint-core",
  "braint-proto",
- "braint-storage",
  "interprocess",
+ "rusqlite",
  "serde",
  "serde_json",
  "tokio",
@@ -156,19 +156,6 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
-]
-
-[[package]]
-name = "braint-storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "braint-core",
- "braint-proto",
- "rusqlite",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -1473,10 +1460,6 @@ dependencies = [
  "unicode-xid",
  "wasmparser",
 ]
-
-[[package]]
-name = "xtask"
-version = "0.1.0"
 
 [[package]]
 name = "zerocopy"

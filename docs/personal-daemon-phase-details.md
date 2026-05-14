@@ -16,7 +16,7 @@ Read the phase before starting it. Reference it while working. Update it if you 
 
 **Steps in order**
 1. `cargo new --bin <name>` at the repo root, then convert to a workspace: delete the auto-generated `src/`, replace `Cargo.toml` with a workspace manifest.
-2. Create the empty crates: `cargo new --lib crates/proto`, `--lib crates/core`, `--lib crates/storage`, `--lib crates/client`, `--lib crates/plugin-sdk`, `--bin crates/daemon`, `--bin crates/cli`, `--bin xtask`.
+2. Create the empty crates: `cargo new --lib crates/proto`, `--lib crates/core`, `--lib crates/client`, `--lib crates/plugin-sdk`, `--bin crates/daemon`, `--bin crates/cli`. (Storage starts as a module inside `daemon` — promote to its own crate later if it earns it. Skip `xtask` for now — a `justfile` covers the simple cases without an extra crate.)
 3. Populate the workspace `Cargo.toml`: list members, declare `[workspace.dependencies]` with pinned versions of the shared crates.
 4. Add `rust-toolchain.toml` pinning the Rust version.
 5. Add `.gitignore` (target/, .env, .DS_Store).
@@ -27,8 +27,8 @@ Read the phase before starting it. Reference it while working. Update it if you 
 
 **Architecture notes**
 - Workspace dependencies in `[workspace.dependencies]` mean each member crate references the version with `dep.workspace = true`. One place to bump versions.
-- `xtask` is a workspace member but a *binary* crate. It's invoked via `cargo xtask <command>` (aliased in `.cargo/config.toml`). Use it for any build automation you'd otherwise put in a shell script — keeps things Windows-friendly.
-- Keep the crate graph acyclic: `proto` depends on nothing, `core` depends on `proto`, `storage` depends on `core`, `daemon` depends on everything, `cli` depends on `proto`/`client`/`core`. Don't let anything reach upward.
+- Use a `justfile` for common command shortcuts (`just dev`, `just check`, `just release`). Simple, requires only the `just` tool, no extra crate. Migrate to an `xtask` binary later *only* if you find yourself wanting to share code between the workspace and your build automation (cross-platform packaging, regenerating files from workspace types, etc.).
+- Keep the crate graph acyclic: `proto` depends on nothing, `core` depends on `proto`, `daemon` depends on `proto`/`core` (and contains the storage module), `cli` depends on `proto`/`client`/`core`, `client` depends on `proto`, `plugin-sdk` depends on `proto`/`core`. Don't let anything reach upward.
 
 **Gotchas**
 - Don't put `tokio` in `core`. The temptation is real because you'll want async APIs everywhere. Resist. `core` stays sync and pure; `daemon` adapts it to async.
@@ -38,7 +38,7 @@ Read the phase before starting it. Reference it while working. Update it if you 
 **Tips**
 - Use `cargo-nextest` for test runs; faster and clearer output than `cargo test`.
 - Set `panic = "abort"` in release profile to shrink the binary. Set `lto = "thin"` and `codegen-units = 1` for the smallest, fastest release builds.
-- A `justfile` (or `xtask` commands) for common invocations: `just dev` runs the daemon with debug logs, `just check` runs fmt + clippy + test.
+- A `justfile` for common invocations: `just dev` runs the daemon with debug logs, `just check` runs fmt + clippy + test, `just demo <phase>` runs the smoke test for a phase.
 
 **Definition of done**
 - `cargo build` succeeds. `cargo test` passes (zero tests is fine). CI is green on Linux + macOS. Repo has README, license, .gitignore, toolchain file, format/lint configs.
@@ -55,7 +55,7 @@ Read the phase before starting it. Reference it while working. Update it if you 
 1. **`proto` first.** Define the core wire types: `EntryId` (UUIDv7 wrapper), `Entry`, `EntryKind` (just `Idea` for now), `HybridLogicalClock`, `DeviceId`. All `serde`-derived. Constants for JSON-RPC method names.
 2. **Define the first JSON-RPC method**: `ingest`. Request: `{ text: String, source: Source }`. Response: `{ entry_id: EntryId }`. Add `JsonRpcRequest`/`JsonRpcResponse`/`JsonRpcError` envelope types (matches the JSON-RPC 2.0 spec).
 3. **`core`**: write `parse_ingest(text: &str) -> Entry`. For now: returns `Entry { kind: Idea, body: text, … }`. Implement UUIDv7 generation, initial HLC, device ID loading from config or generating a fresh one.
-4. **`storage`**: SQLite migration 0001 that creates `entries` (id, kind, body, created_at_hlc, created_on_device, last_modified_at_hlc, last_modified_on_device, …). Implement `save(entry)` and `get(id)`. Use `rusqlite` with `bundled`. Enable WAL mode.
+4. **`daemon::storage` module**: SQLite migration 0001 that creates `entries` (id, kind, body, created_at_hlc, created_on_device, last_modified_at_hlc, last_modified_on_device, …). Implement `save(entry)` and `get(id)`. Use `rusqlite` with `bundled`. Enable WAL mode. Lives in `daemon/src/storage/` as a module; promote to its own crate later only if it earns it.
 5. **`client`**: connect to local socket via `interprocess`, send a JSON-RPC request, await response. One public function: `send_request(req) -> Result<Response>`.
 6. **`daemon`**: open the local socket, accept connections, spawn a tokio task per connection, read JSON-RPC, dispatch `ingest` to a handler that calls `core::parse_ingest` and `storage::save`, send response.
 7. **`cli`**: `clap` for arg parsing. One subcommand: `ingest <text>`. Wire it to `client::send_request`. Print the entry ID on success; exit nonzero with a friendly message on daemon-unreachable.
@@ -64,7 +64,7 @@ Read the phase before starting it. Reference it while working. Update it if you 
 **Architecture notes**
 - The JSON-RPC envelope handling lives in `client` (and a mirror in `daemon`). Don't duplicate the envelope types — define them in `proto` and import.
 - The handler in `daemon` is a sync function from request → response. The async I/O is the socket; the business logic is sync. This keeps testability high.
-- Migrations: store them as `.sql` files in `crates/storage/migrations/`. Use `refinery` or `rusqlite_migration` — both work; the former has a more mature feature set, the latter is lighter.
+- Migrations: store them as `.sql` files in `crates/daemon/src/storage/migrations/` (since storage starts as a module inside daemon). Use `refinery` or `rusqlite_migration` — both work; the former has a more mature feature set, the latter is lighter.
 - HLC implementation: a tuple `(u64 physical_ms, u32 logical, DeviceId)`. Update rules: on each write, `new = max(current_hlc + (0, 1, _), (now_ms, 0, device))`. Total ordering by lexicographic compare.
 
 **Gotchas**
@@ -497,6 +497,6 @@ Read the phase before starting it. Reference it while working. Update it if you 
 - **Commit often, on green only.** Each commit should leave `cargo build && cargo test` passing. Use a `pre-commit` hook to enforce this if necessary.
 - **Write the test before the feature.** Especially for `core` logic — parsers, filters, state machines. Easier to know when you're done.
 - **Open a "Decisions" doc.** Every time you make a tech choice mid-build that wasn't in the tech doc, log it there with a one-line rationale. Future-you and contributors will need this.
-- **Keep the demos working.** As you add phases, the earlier demos may break. Have an `xtask demo <phase>` command that runs each phase's demo as a smoke test. Run before any commit.
+- **Keep the demos working.** As you add phases, the earlier demos may break. Have a `just demo <phase>` recipe that runs each phase's demo as a smoke test. Run before any commit.
 - **Don't refactor backward.** If phase 6 reveals that phase 4a's architecture was wrong, write down the lesson and keep moving. Refactor at the *end* of phase 10 if at all. Pre-MVP refactors eat months.
 - **Resist scope creep per phase.** If a phase is taking 2x its estimate, ship the partial version and move the missing bits to the next phase. Never let a phase block the whole pipeline.

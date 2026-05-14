@@ -3,12 +3,10 @@ resolver = "3"
 members = [
     "crates/braint-proto",
     "crates/braint-core",
-    "crates/braint-storage",
     "crates/braint-client",
     "crates/braint-daemon",
     "crates/braint-cli",
     "crates/braint-plugin-sdk",
-    "crates/xtask",
 ]
 
 [workspace.package]

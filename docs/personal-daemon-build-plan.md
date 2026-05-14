@@ -64,10 +64,10 @@ Vim-style keybindings by default (`hjkl`, `:` for command mode, `/` for search),
 **Goal:** Cargo workspace compiles. CI runs. No product behavior yet.
 
 **Concrete deliverables:**
-- Workspace with empty crates: `proto`, `core`, `storage`, `client`, `daemon`, `cli`, `plugin-sdk`.
+- Workspace with empty crates: `proto`, `core`, `client`, `plugin-sdk`, `daemon` (storage as a module inside), `cli`.
 - One workspace `Cargo.toml`, shared `[workspace.dependencies]` pinning versions of `tokio`, `serde`, `serde_json`, `rusqlite`, `interprocess`, `notify`, `clap`, `ratatui`, `crossterm`, `anyhow`, `thiserror`, `uuid`, `tracing`.
 - GitHub Actions: `cargo build`, `cargo test`, `cargo clippy -- -D warnings`, `cargo fmt --check`, on Linux + macOS.
-- `xtask` crate with placeholder commands.
+- A `justfile` with common commands (`just dev`, `just check`, `just test`). Simple, no extra crate needed. If automation grows complex enough to justify it later, migrate to an `xtask` binary — but that's a "later" problem.
 - Project name chosen. README with a one-paragraph description.
 
 **Demo:** `cargo build` succeeds, `cargo test` passes (zero tests), CI is green.
@@ -83,8 +83,8 @@ Vim-style keybindings by default (`hjkl`, `:` for command mode, `/` for search),
 **Scope:**
 - `proto` crate: `Entry`, `EntryId`, `EntryKind`, `ProjectId`, `TagSet`, `HybridLogicalClock`, `DeviceId`. JSON-RPC method `ingest` with one parameter (a raw text string). One response shape.
 - `core` crate: parse incoming text into `Entry` (default `EntryKind::Idea`, no project, no tags). UUIDv7 generation. HLC initialization.
-- `storage` crate: SQLite migration that creates the `entries` table. `save(entry)` and `get(id)` functions. WAL mode on.
-- `daemon` binary: opens local socket, accepts JSON-RPC, dispatches `ingest` to a handler, persists via `storage`, responds with the entry ID.
+- `daemon::storage` module: SQLite migration that creates the `entries` table. `save(entry)` and `get(id)` functions. WAL mode on. Lives inside the daemon crate as a module.
+- `daemon` binary: opens local socket, accepts JSON-RPC, dispatches `ingest` to a handler, persists via the storage module, responds with the entry ID.
 - `cli` binary: one subcommand, `<name>-cli ingest "<text>"`. Connects to local socket, sends JSON-RPC request, prints the entry ID. Exit codes for success / daemon-unreachable.
 - `client` crate: extract the IPC connect-and-send logic for reuse.
 
