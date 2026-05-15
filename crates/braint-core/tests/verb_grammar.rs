@@ -468,6 +468,44 @@ fn unknown_verb_returns_error() {
     assert!(err.to_string().contains("unknown verb"));
 }
 
+// Verb normalization: leading/trailing punctuation stripped before match.
+// Voice transcription often adds punctuation to the first word.
+#[test]
+fn verb_with_leading_dot_normalized() {
+    check(Case {
+        input: "idea. test body",
+        kind: EntryKind::Idea,
+        body: "test body",
+        project: None,
+        principal: vec![],
+        free: vec![],
+    });
+}
+
+#[test]
+fn verb_with_trailing_comma_normalized() {
+    check(Case {
+        input: "todo, something important",
+        kind: EntryKind::Todo,
+        body: "something important",
+        project: None,
+        principal: vec![],
+        free: vec![],
+    });
+}
+
+#[test]
+fn verb_uppercase_normalized() {
+    check(Case {
+        input: "IDEA test upper",
+        kind: EntryKind::Idea,
+        body: "test upper",
+        project: None,
+        principal: vec![],
+        free: vec![],
+    });
+}
+
 // Extra: double-dash separator works like em-dash
 #[test]
 fn double_dash_separator() {
