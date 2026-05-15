@@ -467,6 +467,40 @@ After the initial load, subscriptions keep both panels live for new events.
 
 **Rule:** Every TUI panel that shows historical data needs both an initial `list` call (snapshot) and a subscription (live updates). Subscriptions alone only work for "show me what happens next" panels like a notification feed.
 
+### Lessons from Phase 3
+
+Real gotchas from Phase 3 (Voxtype voice integration).
+
+#### Voxtype runs as a systemd user service
+`voxtype daemon` runs via `systemctl --user`. Config is read by the daemon process, not the CLI. Changes to `~/.config/voxtype/config.toml` require `systemctl --user restart voxtype` to take effect.
+
+#### `post_process_command` requires an absolute path
+The daemon's PATH is minimal (no `~/.local/bin`, no `~/.cargo/bin`). Always use the full path in the config:
+```toml
+[profiles.braintd]
+post_process_command = "/home/matt/.local/bin/voxtype-to-braint.sh"
+```
+Scripts that call other user binaries must export PATH themselves:
+```bash
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+```
+
+#### `voxtype config` does not display profiles
+The `voxtype config` command shows only the global config. Profiles are not listed even when correctly defined. Verify profiles by reading the systemd service logs:
+```bash
+journalctl --user -u voxtype -f
+```
+A successful profile activation logs: `INFO Using profile override: <name>`.
+
+#### `post_process_command` receives transcript via stdin, stdout becomes output text
+If stdout is empty, voxtype falls back to the original transcript (typed or clipboard depending on `output_mode`). Use `output_mode = "clipboard"` in the profile to avoid typing the fallback text into the focused window.
+
+#### Voice ingest commits directly (no pending) in Phase 3
+`IngestResponse::Committed` now carries `kind: EntryKind` and `body: String` so the CLI can show an informational notification without a round-trip. The pending map still exists for `confirm`/`cancel` CLI commands but the daemon no longer routes voice through it. Re-evaluate pending flow in Phase 4+ if needed.
+
+#### Verb normalization needed for voice input
+Voice transcription often attaches punctuation to the first word ("idea." or "todo,"). The parser now strips `.,-_` from the first token before verb matching. This must happen before the `match` — not as a post-match fixup.
+
 ---
 
 ## Subscription Model

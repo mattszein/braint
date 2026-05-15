@@ -174,7 +174,7 @@ async fn run_command(app: &mut App, client: &mut Client, cmd: &str) {
                 .send::<IngestRequest, braint_proto::IngestResponse>(METHOD_INGEST, &req)
                 .await
             {
-                Ok(braint_proto::IngestResponse::Committed { entry_id }) => {
+                Ok(braint_proto::IngestResponse::Committed { entry_id, .. }) => {
                     app.status = format!("captured: {entry_id}");
                 }
                 Ok(braint_proto::IngestResponse::Pending { pending_id, .. }) => {

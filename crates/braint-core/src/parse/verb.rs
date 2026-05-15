@@ -55,13 +55,21 @@ pub fn parse_verb(text: &str) -> Result<VerbInvocation> {
         return Err(CoreError::Verb("empty input".to_string()));
     }
 
-    let first = tokens[0];
-    let kind = match first.to_lowercase().as_str() {
+    let first_normalized: String = tokens[0]
+        .to_lowercase()
+        .chars()
+        .filter(|c| !matches!(c, '.' | ',' | '-' | '_'))
+        .collect();
+    let kind = match first_normalized.as_str() {
         "idea" => EntryKind::Idea,
         "todo" => EntryKind::Todo,
         "note" => EntryKind::Note,
         "capture" => EntryKind::Capture,
-        other => return Err(CoreError::Verb(format!("unknown verb: {other}"))),
+        other => {
+            return Err(CoreError::Verb(format!(
+                "unknown verb: {other}. Expected: idea, todo, note, capture"
+            )));
+        }
     };
 
     // Find separator index (the token that is exactly "—" or "--")

@@ -12,7 +12,7 @@ pub async fn dispatch(cli: &Cli) -> crate::error::Result<()> {
     let socket = socket_path(cli);
 
     match &cli.cmd {
-        Some(Command::Ingest { text }) => ingest::run("ingest", text, source, &socket, &mode).await,
+        Some(Command::Ingest { text }) => ingest::run("", text, source, &socket, &mode).await,
         Some(Command::Idea { text }) => ingest::run("idea", text, source, &socket, &mode).await,
         Some(Command::Todo { text }) => ingest::run("todo", text, source, &socket, &mode).await,
         Some(Command::Note { text }) => ingest::run("note", text, source, &socket, &mode).await,

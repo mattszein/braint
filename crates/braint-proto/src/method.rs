@@ -53,6 +53,8 @@ impl std::fmt::Display for SubscriptionId {
 pub enum IngestResponse {
     Committed {
         entry_id: EntryId,
+        kind: EntryKind,
+        body: String,
     },
     Pending {
         pending_id: PendingId,

@@ -39,7 +39,7 @@ async fn ingest_cli(client: &Client, text: &str) -> braint_proto::EntryId {
     };
     let resp: IngestResponse = client.send(METHOD_INGEST, &req).await.unwrap();
     match resp {
-        IngestResponse::Committed { entry_id } => entry_id,
+        IngestResponse::Committed { entry_id, .. } => entry_id,
         IngestResponse::Pending { .. } => panic!("expected Committed, got Pending"),
     }
 }

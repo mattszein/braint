@@ -20,7 +20,7 @@ async fn ingest_creates_row_in_sqlite() {
     let resp: IngestResponse = client.send(METHOD_INGEST, &req).await.unwrap();
 
     let entry_id = match resp {
-        IngestResponse::Committed { entry_id } => entry_id,
+        IngestResponse::Committed { entry_id, .. } => entry_id,
         IngestResponse::Pending { .. } => panic!("expected Committed, got Pending"),
     };
 
