@@ -7,7 +7,7 @@ pub mod filter;
 
 use braint_proto::{
     EntryChange, EntryChangeNotification, EntryFilter, JsonRpcNotification,
-    SubscriptionId, METHOD_NOTIFY_ENTRY_CHANGED,
+    METHOD_NOTIFY_ENTRY_CHANGED, SubscriptionId,
 };
 use std::collections::HashMap;
 use tokio::sync::mpsc;

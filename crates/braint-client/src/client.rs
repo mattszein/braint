@@ -1,4 +1,7 @@
-use braint_proto::{JsonRpcRequest, JsonRpcResponse, SubscribeRequest, SubscribeResponse, SubscriptionId, METHOD_SUBSCRIBE};
+use braint_proto::{
+    JsonRpcRequest, JsonRpcResponse, METHOD_SUBSCRIBE, SubscribeRequest, SubscribeResponse,
+    SubscriptionId,
+};
 use interprocess::local_socket::tokio::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
 use std::collections::HashMap;
@@ -42,7 +45,12 @@ impl Client {
         // Spawn writer task
         let pending_for_writer = Arc::clone(&pending);
         let shutdown_for_writer = shutdown_tx.subscribe();
-        tokio::spawn(writer_task(write_half, write_rx, pending_for_writer, shutdown_for_writer));
+        tokio::spawn(writer_task(
+            write_half,
+            write_rx,
+            pending_for_writer,
+            shutdown_for_writer,
+        ));
 
         // Spawn reader task
         let pending_for_reader = Arc::clone(&pending);
@@ -63,11 +71,7 @@ impl Client {
         })
     }
 
-    pub async fn send<Req, Resp>(
-        &self,
-        method: &str,
-        params: &Req,
-    ) -> crate::error::Result<Resp>
+    pub async fn send<Req, Resp>(&self, method: &str, params: &Req) -> crate::error::Result<Resp>
     where
         Req: Serialize,
         Resp: DeserializeOwned,
@@ -82,7 +86,11 @@ impl Client {
         let bytes = serde_json::to_vec(&request).map_err(crate::error::ClientError::Serde)?;
         let (reply_tx, reply_rx) = oneshot::channel();
         self.write_tx
-            .send(OutboundRequest { id, bytes, reply_tx })
+            .send(OutboundRequest {
+                id,
+                bytes,
+                reply_tx,
+            })
             .await
             .map_err(|_| {
                 crate::error::ClientError::DaemonUnreachable("connection closed".into())
@@ -90,8 +98,8 @@ impl Client {
         let response_bytes = reply_rx.await.map_err(|_| {
             crate::error::ClientError::DaemonUnreachable("reply channel closed".into())
         })?;
-        let response: JsonRpcResponse<Resp> = serde_json::from_slice(&response_bytes)
-            .map_err(crate::error::ClientError::Serde)?;
+        let response: JsonRpcResponse<Resp> =
+            serde_json::from_slice(&response_bytes).map_err(crate::error::ClientError::Serde)?;
         match response.result {
             Some(r) => Ok(r),
             None => {

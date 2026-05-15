@@ -21,13 +21,20 @@ pub struct VerbInvocation {
 
 /// Known prefix strings that prevent `for <next>` from consuming a project id.
 const KNOWN_PREFIXES: &[&str] = &[
-    "project:", "status:", "priority:", "when:", "due:", "scope:", "repeat:", "type:", "tags:", "#",
+    "project:",
+    "status:",
+    "priority:",
+    "when:",
+    "due:",
+    "scope:",
+    "repeat:",
+    "type:",
+    "tags:",
+    "#",
 ];
 
 fn has_known_prefix(token: &str) -> bool {
-    KNOWN_PREFIXES
-        .iter()
-        .any(|p| token.starts_with(p))
+    KNOWN_PREFIXES.iter().any(|p| token.starts_with(p))
 }
 
 /// Parse a verb invocation from free-form text.

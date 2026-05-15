@@ -29,8 +29,7 @@ pub fn bind_entry(entry: &Entry) -> [rusqlite::types::Value; 12] {
 
     let principal_json =
         serde_json::to_string(&entry.tags.principal).unwrap_or_else(|_| "[]".to_string());
-    let free_json =
-        serde_json::to_string(&entry.tags.free).unwrap_or_else(|_| "[]".to_string());
+    let free_json = serde_json::to_string(&entry.tags.free).unwrap_or_else(|_| "[]".to_string());
     let project_str = entry.project.as_ref().map(|p| p.0.clone());
 
     [

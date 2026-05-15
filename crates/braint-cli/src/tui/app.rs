@@ -22,12 +22,17 @@ pub struct ScratchPanel {
 }
 
 impl Default for ScratchPanel {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ScratchPanel {
     pub fn new() -> Self {
-        Self { entries: Vec::new(), list_state: ListState::default() }
+        Self {
+            entries: Vec::new(),
+            list_state: ListState::default(),
+        }
     }
 
     pub fn push(&mut self, entry: Entry) {
@@ -50,15 +55,25 @@ impl ScratchPanel {
 
     pub fn next(&mut self) {
         let len = self.entries.len();
-        if len == 0 { return; }
-        let i = self.list_state.selected().map(|i| (i + 1) % len).unwrap_or(0);
+        if len == 0 {
+            return;
+        }
+        let i = self
+            .list_state
+            .selected()
+            .map(|i| (i + 1) % len)
+            .unwrap_or(0);
         self.list_state.select(Some(i));
     }
 
     pub fn prev(&mut self) {
         let len = self.entries.len();
-        if len == 0 { return; }
-        let i = self.list_state.selected()
+        if len == 0 {
+            return;
+        }
+        let i = self
+            .list_state
+            .selected()
             .map(|i| if i == 0 { len - 1 } else { i - 1 })
             .unwrap_or(0);
         self.list_state.select(Some(i));
@@ -70,7 +85,9 @@ pub struct ActivityPanel {
 }
 
 impl ActivityPanel {
-    pub fn new() -> Self { Self { lines: Vec::new() } }
+    pub fn new() -> Self {
+        Self { lines: Vec::new() }
+    }
 
     pub fn push(&mut self, entry: &Entry, change: EntryChange) {
         let verb = match entry.kind {
@@ -102,7 +119,9 @@ pub struct App {
 }
 
 impl Default for App {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl App {
@@ -151,13 +170,11 @@ impl App {
             Mode::Help => " [q/?/Esc] close help  [j/k] nav  [:] command mode".to_string(),
             Mode::Normal => String::new(),
         };
-        let cmd_widget = Paragraph::new(cmd_text)
-            .style(Style::default().fg(Color::Yellow));
+        let cmd_widget = Paragraph::new(cmd_text).style(Style::default().fg(Color::Yellow));
         f.render_widget(cmd_widget, outer[2]);
 
         // Status bar
-        let status = Paragraph::new(self.status.clone())
-            .style(Style::default().fg(Color::Gray));
+        let status = Paragraph::new(self.status.clone()).style(Style::default().fg(Color::Gray));
         f.render_widget(status, outer[3]);
 
         // Help overlay
@@ -170,23 +187,45 @@ impl App {
         let title = format!(" Scratch ({}) ", self.scratch.entries.len());
         let block = Block::default().borders(Borders::ALL).title(title);
 
-        let items: Vec<ListItem> = self.scratch.entries.iter().map(|e| {
-            let preview = if e.body.len() > 60 { format!("{}…", &e.body[..60]) } else { e.body.clone() };
-            let proj = e.project.as_ref().map(|p| format!("[{}] ", p)).unwrap_or_default();
-            ListItem::new(Line::from(format!("• {proj}{preview}")))
-        }).collect();
+        let items: Vec<ListItem> = self
+            .scratch
+            .entries
+            .iter()
+            .map(|e| {
+                let preview = if e.body.len() > 60 {
+                    format!("{}…", &e.body[..60])
+                } else {
+                    e.body.clone()
+                };
+                let proj = e
+                    .project
+                    .as_ref()
+                    .map(|p| format!("[{}] ", p))
+                    .unwrap_or_default();
+                ListItem::new(Line::from(format!("• {proj}{preview}")))
+            })
+            .collect();
 
         let list = List::new(items)
             .block(block)
-            .highlight_style(Style::default().bg(Color::Blue).add_modifier(Modifier::BOLD))
+            .highlight_style(
+                Style::default()
+                    .bg(Color::Blue)
+                    .add_modifier(Modifier::BOLD),
+            )
             .highlight_symbol("> ");
 
         f.render_stateful_widget(list, area, &mut self.scratch.list_state);
     }
 
     fn render_activity(&mut self, f: &mut Frame, area: Rect) {
-        let block = Block::default().borders(Borders::ALL).title(" Recent Activity ");
-        let items: Vec<ListItem> = self.activity.lines.iter()
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(" Recent Activity ");
+        let items: Vec<ListItem> = self
+            .activity
+            .lines
+            .iter()
             .map(|l| ListItem::new(Line::from(l.as_str())))
             .collect();
         let list = List::new(items).block(block);
@@ -198,7 +237,10 @@ impl App {
         let popup = centered_rect(60, 14, area);
         f.render_widget(Clear, popup);
         let help_text = vec![
-            Line::from(vec![Span::styled(" Keybindings", Style::default().add_modifier(Modifier::BOLD))]),
+            Line::from(vec![Span::styled(
+                " Keybindings",
+                Style::default().add_modifier(Modifier::BOLD),
+            )]),
             Line::from(""),
             Line::from("  j / ↓    navigate down"),
             Line::from("  k / ↑    navigate up"),

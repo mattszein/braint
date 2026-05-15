@@ -58,7 +58,11 @@ mod tests {
 
     fn make_entry() -> Entry {
         let device = DeviceId::generate();
-        let hlc = HybridLogicalClock { physical_ms: 1, logical: 0, device_id: device };
+        let hlc = HybridLogicalClock {
+            physical_ms: 1,
+            logical: 0,
+            device_id: device,
+        };
         Entry {
             id: EntryId::generate(),
             kind: EntryKind::Idea,

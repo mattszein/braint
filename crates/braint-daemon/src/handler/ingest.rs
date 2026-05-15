@@ -1,11 +1,11 @@
 //! Ingest handler — parse verb, persist or pend based on source.
 
+use crate::server::state::DaemonState;
 use braint_core::parse_verb;
 use braint_proto::{
-    EntryChange, EntryId, IngestRequest, IngestResponse, JsonRpcError, PendingId, Source,
-    ERR_PARSE, ERR_STORAGE,
+    ERR_PARSE, ERR_STORAGE, EntryChange, EntryId, IngestRequest, IngestResponse, JsonRpcError,
+    PendingId, Source,
 };
-use crate::server::state::DaemonState;
 
 /// Handle an ingest request: parse the verb, then either commit immediately or hold pending.
 ///
@@ -35,7 +35,10 @@ pub async fn handle(
         let pending_id = PendingId::generate();
         let preview = entry.clone();
         state.pending.lock().await.insert(pending_id, entry);
-        return Ok(IngestResponse::Pending { pending_id, preview: Box::new(preview) });
+        return Ok(IngestResponse::Pending {
+            pending_id,
+            preview: Box::new(preview),
+        });
     }
 
     let id: EntryId = entry.id;

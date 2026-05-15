@@ -1,10 +1,10 @@
 //! Confirm and cancel handlers for voice-sourced pending entries.
 
-use braint_proto::{
-    CancelRequest, CancelResponse, ConfirmRequest, ConfirmResponse, EntryChange, JsonRpcError,
-    ERR_NOT_FOUND, ERR_STORAGE, ERR_TTL_EXPIRED,
-};
 use crate::server::state::DaemonState;
+use braint_proto::{
+    CancelRequest, CancelResponse, ConfirmRequest, ConfirmResponse, ERR_NOT_FOUND, ERR_STORAGE,
+    ERR_TTL_EXPIRED, EntryChange, JsonRpcError,
+};
 
 /// Handle a confirm request: move the pending entry into durable storage.
 ///
@@ -19,9 +19,9 @@ pub async fn handle_confirm(
     if !pending.contains(&req.pending_id) {
         return Err(JsonRpcError::new(ERR_NOT_FOUND, "pending entry not found"));
     }
-    let entry = pending.take(req.pending_id).ok_or_else(|| {
-        JsonRpcError::new(ERR_TTL_EXPIRED, "pending entry expired")
-    })?;
+    let entry = pending
+        .take(req.pending_id)
+        .ok_or_else(|| JsonRpcError::new(ERR_TTL_EXPIRED, "pending entry expired"))?;
     drop(pending);
 
     let entry_id = entry.id;

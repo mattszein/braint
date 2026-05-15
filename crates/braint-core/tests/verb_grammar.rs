@@ -1,6 +1,6 @@
 //! Integration tests for the Phase 2 verb grammar parser.
 
-use braint_core::{parse_verb, VerbInvocation};
+use braint_core::{VerbInvocation, parse_verb};
 use braint_proto::{EntryKind, PrincipalTag, ProjectId, TagSet};
 
 struct Case {
@@ -17,16 +17,8 @@ fn check(case: Case) {
         panic!("parse_verb({:?}) failed: {}", case.input, e);
     });
 
-    assert_eq!(
-        result.kind, case.kind,
-        "kind mismatch for {:?}",
-        case.input
-    );
-    assert_eq!(
-        result.body, case.body,
-        "body mismatch for {:?}",
-        case.input
-    );
+    assert_eq!(result.kind, case.kind, "kind mismatch for {:?}", case.input);
+    assert_eq!(result.body, case.body, "body mismatch for {:?}", case.input);
     assert_eq!(
         result.project,
         case.project.map(|p| ProjectId(p.to_string())),

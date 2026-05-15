@@ -24,17 +24,11 @@ async fn subscribe(
 
 /// Wait up to `timeout_ms` milliseconds for a notification on `rx`.
 /// Returns `Some(bytes)` if one arrived, `None` if the deadline elapsed.
-async fn recv_timeout(
-    rx: &mut mpsc::Receiver<Vec<u8>>,
-    timeout_ms: u64,
-) -> Option<Vec<u8>> {
-    tokio::time::timeout(
-        std::time::Duration::from_millis(timeout_ms),
-        rx.recv(),
-    )
-    .await
-    .ok()  // Err(_) means timed-out → None
-    .flatten()
+async fn recv_timeout(rx: &mut mpsc::Receiver<Vec<u8>>, timeout_ms: u64) -> Option<Vec<u8>> {
+    tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), rx.recv())
+        .await
+        .ok() // Err(_) means timed-out → None
+        .flatten()
 }
 
 /// Ingest a Cli entry and return the committed EntryId.
@@ -60,8 +54,12 @@ async fn subscribe_receives_notification_on_ingest() {
 
     // Client A: subscribe with no filter.
     let client_a = Client::connect(socket).await.unwrap();
-    let (_sub_id, mut notif_rx) =
-        subscribe(&client_a, SubscriptionTopic::Scratch, EntryFilter::default()).await;
+    let (_sub_id, mut notif_rx) = subscribe(
+        &client_a,
+        SubscriptionTopic::Scratch,
+        EntryFilter::default(),
+    )
+    .await;
 
     // Brief pause to ensure the subscription is fully registered before ingesting.
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -96,8 +94,7 @@ async fn subscribe_filter_excludes_non_matching() {
         kind: Some(EntryKind::Todo),
         ..EntryFilter::default()
     };
-    let (_sub_id, mut notif_rx) =
-        subscribe(&client_a, SubscriptionTopic::Scratch, filter).await;
+    let (_sub_id, mut notif_rx) = subscribe(&client_a, SubscriptionTopic::Scratch, filter).await;
 
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
@@ -129,8 +126,16 @@ async fn multi_client_concurrent_ingest() {
         ingest_cli(&client_2, "idea concurrent ingest client two"),
     );
 
-    assert_eq!(common::query_count(&handle.db_path, id1), 1, "entry from client 1 must be persisted");
-    assert_eq!(common::query_count(&handle.db_path, id2), 1, "entry from client 2 must be persisted");
+    assert_eq!(
+        common::query_count(&handle.db_path, id1),
+        1,
+        "entry from client 1 must be persisted"
+    );
+    assert_eq!(
+        common::query_count(&handle.db_path, id2),
+        1,
+        "entry from client 2 must be persisted"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -143,8 +148,12 @@ async fn unsubscribe_stops_notifications() {
 
     // Client A: subscribe.
     let client_a = Client::connect(socket).await.unwrap();
-    let (sub_id, mut notif_rx) =
-        subscribe(&client_a, SubscriptionTopic::Scratch, EntryFilter::default()).await;
+    let (sub_id, mut notif_rx) = subscribe(
+        &client_a,
+        SubscriptionTopic::Scratch,
+        EntryFilter::default(),
+    )
+    .await;
 
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
@@ -153,10 +162,15 @@ async fn unsubscribe_stops_notifications() {
     ingest_cli(&client_b, "idea first ingest before unsubscribe").await;
 
     let first = recv_timeout(&mut notif_rx, 500).await;
-    assert!(first.is_some(), "client A must receive the first notification");
+    assert!(
+        first.is_some(),
+        "client A must receive the first notification"
+    );
 
     // Client A: unsubscribe.
-    let unsub_req = UnsubscribeRequest { subscription_id: sub_id };
+    let unsub_req = UnsubscribeRequest {
+        subscription_id: sub_id,
+    };
     let _: UnsubscribeResponse = client_a.send(METHOD_UNSUBSCRIBE, &unsub_req).await.unwrap();
 
     // Give the unsubscribe a moment to propagate on the server.

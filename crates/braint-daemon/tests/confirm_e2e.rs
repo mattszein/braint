@@ -34,8 +34,7 @@ async fn voice_ingest_then_confirm_creates_row() {
     let pending_id = ingest_voice(&client, "idea test confirmation flow").await;
 
     let confirm_req = ConfirmRequest { pending_id };
-    let confirm_resp: ConfirmResponse =
-        client.send(METHOD_CONFIRM, &confirm_req).await.unwrap();
+    let confirm_resp: ConfirmResponse = client.send(METHOD_CONFIRM, &confirm_req).await.unwrap();
 
     // The entry must now be present in SQLite.
     let count = common::query_count(&handle.db_path, confirm_resp.entry_id);
@@ -59,7 +58,10 @@ async fn voice_ingest_then_cancel_no_row() {
     };
     let resp: IngestResponse = client.send(METHOD_INGEST, &req).await.unwrap();
     let (pending_id, preview_entry_id) = match resp {
-        IngestResponse::Pending { pending_id, preview } => (pending_id, preview.id),
+        IngestResponse::Pending {
+            pending_id,
+            preview,
+        } => (pending_id, preview.id),
         IngestResponse::Committed { .. } => panic!("expected Pending"),
     };
 
@@ -85,16 +87,10 @@ async fn double_cancel_is_ok() {
     let cancel_req = CancelRequest { pending_id };
 
     // First cancel — should succeed.
-    let _: CancelResponse = client
-        .send(METHOD_CANCEL, &cancel_req)
-        .await
-        .unwrap();
+    let _: CancelResponse = client.send(METHOD_CANCEL, &cancel_req).await.unwrap();
 
     // Second cancel — must also succeed (idempotent).
-    let _: CancelResponse = client
-        .send(METHOD_CANCEL, &cancel_req)
-        .await
-        .unwrap();
+    let _: CancelResponse = client.send(METHOD_CANCEL, &cancel_req).await.unwrap();
 }
 
 // ---------------------------------------------------------------------------
@@ -109,11 +105,16 @@ async fn confirm_unknown_id_returns_error() {
 
     // Use a random PendingId that was never registered.
     let fake_pending_id = braint_proto::PendingId(Uuid::now_v7());
-    let confirm_req = ConfirmRequest { pending_id: fake_pending_id };
+    let confirm_req = ConfirmRequest {
+        pending_id: fake_pending_id,
+    };
 
     let result: Result<ConfirmResponse, _> = client.send(METHOD_CONFIRM, &confirm_req).await;
 
-    assert!(result.is_err(), "confirming an unknown id must return an error");
+    assert!(
+        result.is_err(),
+        "confirming an unknown id must return an error"
+    );
 
     let err_msg = result.unwrap_err().to_string();
     // The server returns ERR_NOT_FOUND (-32002) with "pending entry not found".

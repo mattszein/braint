@@ -1,6 +1,6 @@
 use braint_core::Clock;
 use braint_daemon::{
-    config::{load_or_create_device_id, DaemonConfig},
+    config::{DaemonConfig, load_or_create_device_id},
     server::{self, state::DaemonState},
     storage::Storage,
 };

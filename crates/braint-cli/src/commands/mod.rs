@@ -16,7 +16,9 @@ pub async fn dispatch(cli: &Cli) -> crate::error::Result<()> {
         Some(Command::Idea { text }) => ingest::run("idea", text, source, &socket, &mode).await,
         Some(Command::Todo { text }) => ingest::run("todo", text, source, &socket, &mode).await,
         Some(Command::Note { text }) => ingest::run("note", text, source, &socket, &mode).await,
-        Some(Command::Capture { text }) => ingest::run("capture", text, source, &socket, &mode).await,
+        Some(Command::Capture { text }) => {
+            ingest::run("capture", text, source, &socket, &mode).await
+        }
         Some(Command::Confirm { pending_id }) => confirm::run(pending_id, &socket, &mode).await,
         Some(Command::Cancel { pending_id }) => cancel::run(pending_id, &socket, &mode).await,
         None => {

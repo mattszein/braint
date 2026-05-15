@@ -21,7 +21,9 @@ pub struct IngestRequest {
 pub struct PendingId(pub Uuid);
 
 impl PendingId {
-    pub fn generate() -> Self { Self(Uuid::now_v7()) }
+    pub fn generate() -> Self {
+        Self(Uuid::now_v7())
+    }
 }
 
 impl std::fmt::Display for PendingId {
@@ -35,7 +37,9 @@ impl std::fmt::Display for PendingId {
 pub struct SubscriptionId(pub Uuid);
 
 impl SubscriptionId {
-    pub fn generate() -> Self { Self(Uuid::now_v7()) }
+    pub fn generate() -> Self {
+        Self(Uuid::now_v7())
+    }
 }
 
 impl std::fmt::Display for SubscriptionId {
@@ -47,18 +51,29 @@ impl std::fmt::Display for SubscriptionId {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "status")]
 pub enum IngestResponse {
-    Committed { entry_id: EntryId },
-    Pending { pending_id: PendingId, preview: Box<Entry> },
+    Committed {
+        entry_id: EntryId,
+    },
+    Pending {
+        pending_id: PendingId,
+        preview: Box<Entry>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfirmRequest { pub pending_id: PendingId }
+pub struct ConfirmRequest {
+    pub pending_id: PendingId,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfirmResponse { pub entry_id: EntryId }
+pub struct ConfirmResponse {
+    pub entry_id: EntryId,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CancelRequest { pub pending_id: PendingId }
+pub struct CancelRequest {
+    pub pending_id: PendingId,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CancelResponse {}
@@ -87,10 +102,14 @@ pub struct SubscribeRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscribeResponse { pub subscription_id: SubscriptionId }
+pub struct SubscribeResponse {
+    pub subscription_id: SubscriptionId,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UnsubscribeRequest { pub subscription_id: SubscriptionId }
+pub struct UnsubscribeRequest {
+    pub subscription_id: SubscriptionId,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnsubscribeResponse {}
@@ -108,7 +127,11 @@ pub struct ListResponse {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum EntryChange { Created, Updated, Deleted }
+pub enum EntryChange {
+    Created,
+    Updated,
+    Deleted,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntryChangeNotification {

@@ -1,16 +1,15 @@
 //! Event loop: multiplexes crossterm keyboard events and subscription notifications.
 
+use super::app::{App, Mode};
 use braint_client::Client;
-use braint_proto::{
-    EntryChangeNotification, EntryFilter, IngestRequest, JsonRpcNotification,
-    ListRequest, ListResponse, Source, SubscribeRequest, SubscriptionTopic,
-    METHOD_INGEST, METHOD_LIST,
-};
 use braint_core::parse_verb;
+use braint_proto::{
+    EntryChangeNotification, EntryFilter, IngestRequest, JsonRpcNotification, ListRequest,
+    ListResponse, METHOD_INGEST, METHOD_LIST, Source, SubscribeRequest, SubscriptionTopic,
+};
 use crossterm::event::{Event, EventStream, KeyCode, KeyModifiers};
 use futures::StreamExt;
-use ratatui::{backend::Backend, Terminal};
-use super::app::{App, Mode};
+use ratatui::{Terminal, backend::Backend};
 
 /// Milliseconds since epoch for midnight UTC today.
 fn today_start_ms() -> u64 {
@@ -40,8 +39,14 @@ pub async fn run<B: Backend>(
         .map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
 
     // Initial load: all entries for scratch (newest at top).
-    let all_req = ListRequest { filter: EntryFilter::default(), limit: Some(200) };
-    if let Ok(resp) = client.send::<ListRequest, ListResponse>(METHOD_LIST, &all_req).await {
+    let all_req = ListRequest {
+        filter: EntryFilter::default(),
+        limit: Some(200),
+    };
+    if let Ok(resp) = client
+        .send::<ListRequest, ListResponse>(METHOD_LIST, &all_req)
+        .await
+    {
         for entry in resp.entries.into_iter().rev() {
             app.scratch.push(entry);
         }
@@ -49,18 +54,27 @@ pub async fn run<B: Backend>(
 
     // Initial load: today's entries for activity panel (oldest → newest order for push).
     let today_req = ListRequest {
-        filter: EntryFilter { since_ms: Some(today_start_ms()), ..Default::default() },
+        filter: EntryFilter {
+            since_ms: Some(today_start_ms()),
+            ..Default::default()
+        },
         limit: Some(200),
     };
-    if let Ok(resp) = client.send::<ListRequest, ListResponse>(METHOD_LIST, &today_req).await {
+    if let Ok(resp) = client
+        .send::<ListRequest, ListResponse>(METHOD_LIST, &today_req)
+        .await
+    {
         // entries from storage are newest-first; reverse so activity shows newest at top
         for entry in resp.entries.into_iter().rev() {
-            app.activity.push(&entry, braint_proto::EntryChange::Created);
+            app.activity
+                .push(&entry, braint_proto::EntryChange::Created);
         }
     }
 
     // Initial draw
-    terminal.draw(|f| app.render(f)).map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
+    terminal
+        .draw(|f| app.render(f))
+        .map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
 
     let mut event_stream = EventStream::new();
 
@@ -133,8 +147,12 @@ async fn handle_key(
                     run_command(app, client, &cmd).await;
                 }
             }
-            KeyCode::Backspace => { app.command.pop(); }
-            KeyCode::Char(c) => { app.command.push(c); }
+            KeyCode::Backspace => {
+                app.command.pop();
+            }
+            KeyCode::Char(c) => {
+                app.command.push(c);
+            }
             _ => {}
         },
     }
@@ -148,8 +166,14 @@ async fn run_command(app: &mut App, client: &mut Client, cmd: &str) {
             app.status = format!("error: {e}");
         }
         Ok(_invocation) => {
-            let req = IngestRequest { text: cmd.to_string(), source: Source::Cli };
-            match client.send::<IngestRequest, braint_proto::IngestResponse>(METHOD_INGEST, &req).await {
+            let req = IngestRequest {
+                text: cmd.to_string(),
+                source: Source::Cli,
+            };
+            match client
+                .send::<IngestRequest, braint_proto::IngestResponse>(METHOD_INGEST, &req)
+                .await
+            {
                 Ok(braint_proto::IngestResponse::Committed { entry_id }) => {
                     app.status = format!("captured: {entry_id}");
                 }

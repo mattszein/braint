@@ -20,9 +20,12 @@ pub fn filter_matches(filter: &EntryFilter, entry: &Entry) -> bool {
         }
     }
     for principal in &filter.principal_match {
-        if !entry.tags.principal.iter().any(|p| {
-            p.prefix() == principal.prefix() && p.value() == principal.value()
-        }) {
+        if !entry
+            .tags
+            .principal
+            .iter()
+            .any(|p| p.prefix() == principal.prefix() && p.value() == principal.value())
+        {
             return false;
         }
     }
@@ -38,13 +41,23 @@ pub fn filter_matches(filter: &EntryFilter, entry: &Entry) -> bool {
 mod tests {
     use super::*;
     use braint_proto::{
-        DeviceId, Entry, EntryId, EntryFilter, EntryKind, HybridLogicalClock,
-        PrincipalTag, ProjectId, TagSet,
+        DeviceId, Entry, EntryFilter, EntryId, EntryKind, HybridLogicalClock, PrincipalTag,
+        ProjectId, TagSet,
     };
 
-    fn make_entry(kind: EntryKind, project: Option<&str>, free: &[&str], principal: &[PrincipalTag], physical_ms: u64) -> Entry {
+    fn make_entry(
+        kind: EntryKind,
+        project: Option<&str>,
+        free: &[&str],
+        principal: &[PrincipalTag],
+        physical_ms: u64,
+    ) -> Entry {
         let device = DeviceId::generate();
-        let hlc = HybridLogicalClock { physical_ms, logical: 0, device_id: device };
+        let hlc = HybridLogicalClock {
+            physical_ms,
+            logical: 0,
+            device_id: device,
+        };
         Entry {
             id: EntryId::generate(),
             kind,
@@ -61,7 +74,9 @@ mod tests {
         }
     }
 
-    fn empty_filter() -> EntryFilter { EntryFilter::default() }
+    fn empty_filter() -> EntryFilter {
+        EntryFilter::default()
+    }
 
     #[test]
     fn empty_filter_matches_everything() {
@@ -73,7 +88,10 @@ mod tests {
     fn kind_filter_matches() {
         let idea = make_entry(EntryKind::Idea, None, &[], &[], 1000);
         let todo = make_entry(EntryKind::Todo, None, &[], &[], 1000);
-        let f = EntryFilter { kind: Some(EntryKind::Idea), ..Default::default() };
+        let f = EntryFilter {
+            kind: Some(EntryKind::Idea),
+            ..Default::default()
+        };
         assert!(filter_matches(&f, &idea));
         assert!(!filter_matches(&f, &todo));
     }
@@ -83,7 +101,10 @@ mod tests {
         let with_proj = make_entry(EntryKind::Idea, Some("braint"), &[], &[], 1000);
         let other_proj = make_entry(EntryKind::Idea, Some("other"), &[], &[], 1000);
         let no_proj = make_entry(EntryKind::Idea, None, &[], &[], 1000);
-        let f = EntryFilter { project: Some(ProjectId("braint".to_string())), ..Default::default() };
+        let f = EntryFilter {
+            project: Some(ProjectId("braint".to_string())),
+            ..Default::default()
+        };
         assert!(filter_matches(&f, &with_proj));
         assert!(!filter_matches(&f, &other_proj));
         assert!(!filter_matches(&f, &no_proj));
@@ -92,9 +113,18 @@ mod tests {
     #[test]
     fn free_tag_filter_all_required() {
         let e = make_entry(EntryKind::Idea, None, &["rust", "async"], &[], 1000);
-        let f_one = EntryFilter { free_tags: vec!["rust".to_string()], ..Default::default() };
-        let f_both = EntryFilter { free_tags: vec!["rust".to_string(), "async".to_string()], ..Default::default() };
-        let f_missing = EntryFilter { free_tags: vec!["python".to_string()], ..Default::default() };
+        let f_one = EntryFilter {
+            free_tags: vec!["rust".to_string()],
+            ..Default::default()
+        };
+        let f_both = EntryFilter {
+            free_tags: vec!["rust".to_string(), "async".to_string()],
+            ..Default::default()
+        };
+        let f_missing = EntryFilter {
+            free_tags: vec!["python".to_string()],
+            ..Default::default()
+        };
         assert!(filter_matches(&f_one, &e));
         assert!(filter_matches(&f_both, &e));
         assert!(!filter_matches(&f_missing, &e));
@@ -102,7 +132,13 @@ mod tests {
 
     #[test]
     fn principal_tag_filter() {
-        let e = make_entry(EntryKind::Todo, None, &[], &[PrincipalTag::Priority("high".to_string())], 1000);
+        let e = make_entry(
+            EntryKind::Todo,
+            None,
+            &[],
+            &[PrincipalTag::Priority("high".to_string())],
+            1000,
+        );
         let f_match = EntryFilter {
             principal_match: vec![PrincipalTag::Priority("high".to_string())],
             ..Default::default()
@@ -124,15 +160,30 @@ mod tests {
     fn since_ms_filter() {
         let old = make_entry(EntryKind::Idea, None, &[], &[], 500);
         let new = make_entry(EntryKind::Idea, None, &[], &[], 1500);
-        let f = EntryFilter { since_ms: Some(1000), ..Default::default() };
+        let f = EntryFilter {
+            since_ms: Some(1000),
+            ..Default::default()
+        };
         assert!(!filter_matches(&f, &old));
         assert!(filter_matches(&f, &new));
     }
 
     #[test]
     fn combined_filter_all_must_match() {
-        let matching = make_entry(EntryKind::Todo, Some("proj"), &["tag1"], &[PrincipalTag::Status("open".to_string())], 2000);
-        let wrong_kind = make_entry(EntryKind::Idea, Some("proj"), &["tag1"], &[PrincipalTag::Status("open".to_string())], 2000);
+        let matching = make_entry(
+            EntryKind::Todo,
+            Some("proj"),
+            &["tag1"],
+            &[PrincipalTag::Status("open".to_string())],
+            2000,
+        );
+        let wrong_kind = make_entry(
+            EntryKind::Idea,
+            Some("proj"),
+            &["tag1"],
+            &[PrincipalTag::Status("open".to_string())],
+            2000,
+        );
         let f = EntryFilter {
             kind: Some(EntryKind::Todo),
             project: Some(ProjectId("proj".to_string())),

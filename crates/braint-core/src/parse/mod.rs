@@ -5,7 +5,7 @@
 
 pub mod verb;
 
-pub use verb::{parse_verb, VerbInvocation};
+pub use verb::{VerbInvocation, parse_verb};
 
 use crate::error::Result;
 use braint_proto::{DeviceId, Entry, EntryId, EntryKind, HybridLogicalClock};

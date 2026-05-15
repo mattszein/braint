@@ -1,7 +1,7 @@
 //! TUI snapshot tests using ratatui's TestBackend.
 
 use braint_cli::tui::App;
-use ratatui::{backend::TestBackend, Terminal};
+use ratatui::{Terminal, backend::TestBackend};
 
 #[test]
 fn initial_render_is_stable() {
@@ -11,23 +11,39 @@ fn initial_render_is_stable() {
     terminal.draw(|f| app.render(f)).unwrap();
     let buffer = terminal.backend().buffer().clone();
     // Check header line is present
-    let first_line: String = (0..80).map(|x| buffer[(x, 0)].symbol().to_string()).collect();
-    assert!(first_line.contains("braint"), "header should contain 'braint'");
+    let first_line: String = (0..80)
+        .map(|x| buffer[(x, 0)].symbol().to_string())
+        .collect();
+    assert!(
+        first_line.contains("braint"),
+        "header should contain 'braint'"
+    );
     // Check panel titles
-    let rendered: String = buffer.content().iter().map(|c| c.symbol().to_string()).collect();
+    let rendered: String = buffer
+        .content()
+        .iter()
+        .map(|c| c.symbol().to_string())
+        .collect();
     assert!(rendered.contains("Scratch"), "should have Scratch panel");
-    assert!(rendered.contains("Recent Activity"), "should have Recent Activity panel");
+    assert!(
+        rendered.contains("Recent Activity"),
+        "should have Recent Activity panel"
+    );
 }
 
 #[test]
 fn after_entries_shows_in_scratch() {
-    use braint_proto::{Entry, EntryId, EntryKind, HybridLogicalClock, DeviceId, TagSet};
+    use braint_proto::{DeviceId, Entry, EntryId, EntryKind, HybridLogicalClock, TagSet};
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut app = App::new();
 
     let device = DeviceId::generate();
-    let hlc = HybridLogicalClock { physical_ms: 1000, logical: 0, device_id: device };
+    let hlc = HybridLogicalClock {
+        physical_ms: 1000,
+        logical: 0,
+        device_id: device,
+    };
     for i in 0..3 {
         let entry = Entry {
             id: EntryId::generate(),
@@ -45,8 +61,14 @@ fn after_entries_shows_in_scratch() {
 
     terminal.draw(|f| app.render(f)).unwrap();
     let buffer = terminal.backend().buffer().clone();
-    let rendered: String = buffer.content().iter().map(|c| c.symbol().to_string()).collect();
+    let rendered: String = buffer
+        .content()
+        .iter()
+        .map(|c| c.symbol().to_string())
+        .collect();
     assert!(rendered.contains("test entry"), "should show entries");
-    let title: String = (0..80).map(|x| buffer[(x, 1)].symbol().to_string()).collect();
+    let title: String = (0..80)
+        .map(|x| buffer[(x, 1)].symbol().to_string())
+        .collect();
     assert!(title.contains("Scratch (3)"), "count should be 3");
 }

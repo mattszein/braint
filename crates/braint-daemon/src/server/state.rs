@@ -1,10 +1,7 @@
 //! Shared daemon state — cloned cheaply per-connection (all heavy fields are `Arc`).
 
 use crate::{
-    config::DaemonConfig,
-    pending::PendingMap,
-    storage::Storage,
-    subscription::SubscriptionManager,
+    config::DaemonConfig, pending::PendingMap, storage::Storage, subscription::SubscriptionManager,
 };
 use braint_core::Clock;
 use braint_proto::DeviceId;
@@ -32,12 +29,7 @@ pub struct DaemonState {
 
 impl DaemonState {
     /// Construct a new `DaemonState`, initialising all sub-components.
-    pub fn new(
-        storage: Storage,
-        clock: Clock,
-        device_id: DeviceId,
-        config: DaemonConfig,
-    ) -> Self {
+    pub fn new(storage: Storage, clock: Clock, device_id: DeviceId, config: DaemonConfig) -> Self {
         let ttl = config.pending_ttl_secs;
         Self {
             storage: Arc::new(Mutex::new(storage)),

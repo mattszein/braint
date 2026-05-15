@@ -100,8 +100,13 @@ impl PrincipalTag {
 
     pub fn value(&self) -> &str {
         match self {
-            Self::Status(v) | Self::Priority(v) | Self::When(v) | Self::Due(v)
-            | Self::Scope(v) | Self::Repeat(v) | Self::Type(v) => v,
+            Self::Status(v)
+            | Self::Priority(v)
+            | Self::When(v)
+            | Self::Due(v)
+            | Self::Scope(v)
+            | Self::Repeat(v)
+            | Self::Type(v) => v,
         }
     }
 }

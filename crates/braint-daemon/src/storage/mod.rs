@@ -123,7 +123,11 @@ mod tests {
 
         let device = DeviceId::generate();
         let make = |ms: u64, body: &str| {
-            let hlc = HybridLogicalClock { physical_ms: ms, logical: 0, device_id: device };
+            let hlc = HybridLogicalClock {
+                physical_ms: ms,
+                logical: 0,
+                device_id: device,
+            };
             Entry {
                 id: EntryId::generate(),
                 kind: EntryKind::Idea,
@@ -158,18 +162,24 @@ mod tests {
 
         let device = DeviceId::generate();
         for ms in [1000u64, 2000, 3000] {
-            let hlc = HybridLogicalClock { physical_ms: ms, logical: 0, device_id: device };
-            storage.save(&Entry {
-                id: EntryId::generate(),
-                kind: EntryKind::Idea,
-                body: format!("entry-{ms}"),
-                created_at: hlc,
-                created_on_device: device,
-                last_modified_at: hlc,
-                last_modified_on_device: device,
-                project: None,
-                tags: Default::default(),
-            }).unwrap();
+            let hlc = HybridLogicalClock {
+                physical_ms: ms,
+                logical: 0,
+                device_id: device,
+            };
+            storage
+                .save(&Entry {
+                    id: EntryId::generate(),
+                    kind: EntryKind::Idea,
+                    body: format!("entry-{ms}"),
+                    created_at: hlc,
+                    created_on_device: device,
+                    last_modified_at: hlc,
+                    last_modified_on_device: device,
+                    project: None,
+                    tags: Default::default(),
+                })
+                .unwrap();
         }
 
         let limited = storage.list(Some(1)).unwrap();

@@ -1,9 +1,9 @@
 //! Subscribe / unsubscribe handlers.
 
+use crate::{server::state::DaemonState, subscription::ConnectionId};
 use braint_proto::{
     JsonRpcError, SubscribeRequest, SubscribeResponse, UnsubscribeRequest, UnsubscribeResponse,
 };
-use crate::{server::state::DaemonState, subscription::ConnectionId};
 use tokio::sync::mpsc;
 
 /// Handle a subscribe request: register the filter and spawn a forwarding task.

@@ -1,8 +1,8 @@
 //! List handler — query existing entries with optional filter.
 
-use braint_proto::{JsonRpcError, ListRequest, ListResponse, ERR_STORAGE};
 use crate::server::state::DaemonState;
 use crate::subscription::filter::filter_matches;
+use braint_proto::{ERR_STORAGE, JsonRpcError, ListRequest, ListResponse};
 
 pub async fn handle(state: &DaemonState, req: ListRequest) -> Result<ListResponse, JsonRpcError> {
     let entries = state

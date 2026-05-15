@@ -1,6 +1,6 @@
+use crate::output::OutputMode;
 use braint_client::Client;
 use braint_proto::{IngestRequest, IngestResponse, METHOD_INGEST, Source};
-use crate::output::OutputMode;
 
 pub async fn run(
     verb_prefix: &str,
@@ -15,7 +15,10 @@ pub async fn run(
         .await
         .map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
 
-    let req = IngestRequest { text: full_text, source };
+    let req = IngestRequest {
+        text: full_text,
+        source,
+    };
     let resp: IngestResponse = client
         .send(METHOD_INGEST, &req)
         .await

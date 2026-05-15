@@ -8,4 +8,4 @@ pub mod parse;
 
 pub use clock::Clock;
 pub use error::{CoreError, Result};
-pub use parse::{parse_ingest, parse_verb, VerbInvocation};
+pub use parse::{VerbInvocation, parse_ingest, parse_verb};

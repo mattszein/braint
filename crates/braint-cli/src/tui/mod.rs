@@ -7,9 +7,9 @@ pub mod panels;
 use braint_client::Client;
 use crossterm::{
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 
 pub use app::App;
@@ -30,7 +30,8 @@ pub async fn run(client: Client) -> crate::error::Result<()> {
     execute!(stdout, EnterAlternateScreen).map_err(crate::error::CliError::Io)?;
 
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend).map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
+    let mut terminal =
+        Terminal::new(backend).map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
 
     let result = event_loop::run(&mut terminal, client).await;
 

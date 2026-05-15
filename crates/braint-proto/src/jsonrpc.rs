@@ -46,7 +46,11 @@ pub struct JsonRpcNotification<T> {
 
 impl<T> JsonRpcNotification<T> {
     pub fn new(method: impl Into<String>, params: T) -> Self {
-        Self { jsonrpc: "2.0".to_string(), method: method.into(), params }
+        Self {
+            jsonrpc: "2.0".to_string(),
+            method: method.into(),
+            params,
+        }
     }
 }
 
