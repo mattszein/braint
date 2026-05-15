@@ -54,7 +54,7 @@ impl Storage {
              FROM entries ORDER BY created_at_physical_ms DESC, created_at_logical DESC {limit_clause}"
         );
         let mut stmt = self.conn.prepare(&sql)?;
-        let rows = stmt.query_map([], |row| entry::row_to_entry(row))?;
+        let rows = stmt.query_map([], entry::row_to_entry)?;
         let mut entries = Vec::new();
         for row in rows {
             entries.push(row?);
@@ -114,5 +114,74 @@ mod tests {
         assert_eq!(fetched.body, entry.body);
         assert_eq!(fetched.kind, entry.kind);
         assert_eq!(fetched.id.0, entry.id.0);
+    }
+
+    #[test]
+    fn list_returns_all_newest_first() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let mut storage = Storage::open(&tempdir.path().join("test.db")).unwrap();
+
+        let device = DeviceId::generate();
+        let make = |ms: u64, body: &str| {
+            let hlc = HybridLogicalClock { physical_ms: ms, logical: 0, device_id: device };
+            Entry {
+                id: EntryId::generate(),
+                kind: EntryKind::Idea,
+                body: body.to_string(),
+                created_at: hlc,
+                created_on_device: device,
+                last_modified_at: hlc,
+                last_modified_on_device: device,
+                project: None,
+                tags: Default::default(),
+            }
+        };
+
+        let e1 = make(1000, "oldest");
+        let e2 = make(2000, "middle");
+        let e3 = make(3000, "newest");
+        storage.save(&e1).unwrap();
+        storage.save(&e2).unwrap();
+        storage.save(&e3).unwrap();
+
+        let all = storage.list(None).unwrap();
+        assert_eq!(all.len(), 3);
+        assert_eq!(all[0].body, "newest");
+        assert_eq!(all[1].body, "middle");
+        assert_eq!(all[2].body, "oldest");
+    }
+
+    #[test]
+    fn list_with_limit() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let mut storage = Storage::open(&tempdir.path().join("test.db")).unwrap();
+
+        let device = DeviceId::generate();
+        for ms in [1000u64, 2000, 3000] {
+            let hlc = HybridLogicalClock { physical_ms: ms, logical: 0, device_id: device };
+            storage.save(&Entry {
+                id: EntryId::generate(),
+                kind: EntryKind::Idea,
+                body: format!("entry-{ms}"),
+                created_at: hlc,
+                created_on_device: device,
+                last_modified_at: hlc,
+                last_modified_on_device: device,
+                project: None,
+                tags: Default::default(),
+            }).unwrap();
+        }
+
+        let limited = storage.list(Some(1)).unwrap();
+        assert_eq!(limited.len(), 1);
+        assert_eq!(limited[0].body, "entry-3000");
+    }
+
+    #[test]
+    fn list_empty_db() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let storage = Storage::open(&tempdir.path().join("test.db")).unwrap();
+        let entries = storage.list(None).unwrap();
+        assert!(entries.is_empty());
     }
 }

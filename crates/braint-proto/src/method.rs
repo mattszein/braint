@@ -48,7 +48,7 @@ impl std::fmt::Display for SubscriptionId {
 #[serde(rename_all = "snake_case", tag = "status")]
 pub enum IngestResponse {
     Committed { entry_id: EntryId },
-    Pending { pending_id: PendingId, preview: Entry },
+    Pending { pending_id: PendingId, preview: Box<Entry> },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

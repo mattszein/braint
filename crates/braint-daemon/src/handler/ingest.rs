@@ -35,7 +35,7 @@ pub async fn handle(
         let pending_id = PendingId::generate();
         let preview = entry.clone();
         state.pending.lock().await.insert(pending_id, entry);
-        return Ok(IngestResponse::Pending { pending_id, preview });
+        return Ok(IngestResponse::Pending { pending_id, preview: Box::new(preview) });
     }
 
     let id: EntryId = entry.id;

@@ -82,12 +82,10 @@ pub fn parse_verb(text: &str) -> Result<VerbInvocation> {
 
         if tok == "for" {
             // `for <next_word>` — consume next word as project if it doesn't start with a known prefix
-            if let Some(next) = header_tokens.get(i + 1) {
-                if !has_known_prefix(next) {
-                    project = Some(ProjectId(next.to_string()));
-                    i += 2;
-                    continue;
-                }
+            if let Some(next) = header_tokens.get(i + 1).filter(|n| !has_known_prefix(n)) {
+                project = Some(ProjectId(next.to_string()));
+                i += 2;
+                continue;
             }
             // `for` with no valid next — fall through to unrecognized
             if has_separator {

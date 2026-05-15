@@ -21,6 +21,10 @@ pub struct ScratchPanel {
     pub list_state: ListState,
 }
 
+impl Default for ScratchPanel {
+    fn default() -> Self { Self::new() }
+}
+
 impl ScratchPanel {
     pub fn new() -> Self {
         Self { entries: Vec::new(), list_state: ListState::default() }
@@ -95,6 +99,10 @@ pub struct App {
     pub activity: ActivityPanel,
     pub command: String,
     pub status: String,
+}
+
+impl Default for App {
+    fn default() -> Self { Self::new() }
 }
 
 impl App {

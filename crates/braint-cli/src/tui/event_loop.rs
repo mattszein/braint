@@ -68,11 +68,12 @@ pub async fn run<B: Backend>(
         tokio::select! {
             Some(event_result) = event_stream.next() => {
                 match event_result {
-                    Ok(Event::Key(key)) => {
-                        if handle_key(&mut app, key, &mut client).await? {
-                            break;
-                        }
+                    Ok(Event::Key(key))
+                        if handle_key(&mut app, key, &mut client).await? =>
+                    {
+                        break;
                     }
+                    Ok(Event::Key(_)) => {}
                     Err(_) => break,
                     _ => {}
                 }
