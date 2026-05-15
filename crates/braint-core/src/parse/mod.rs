@@ -1,3 +1,12 @@
+//! Parse module — turns raw text into structured domain types.
+//!
+//! Phase 1: `parse_ingest` creates a full `Entry` from text (no verb parsing).
+//! Phase 2: `parse_verb` extracts structured `VerbInvocation` from verb grammar.
+
+pub mod verb;
+
+pub use verb::{VerbInvocation, parse_verb};
+
 use crate::error::Result;
 use braint_proto::{DeviceId, Entry, EntryId, EntryKind, HybridLogicalClock};
 
@@ -12,6 +21,8 @@ pub fn parse_ingest(text: &str, device_id: DeviceId, hlc: HybridLogicalClock) ->
         created_on_device: device_id,
         last_modified_at: hlc,
         last_modified_on_device: device_id,
+        project: None,
+        tags: Default::default(),
     })
 }
 

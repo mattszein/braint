@@ -1,9 +1,11 @@
 use braint_core::Clock;
-use braint_daemon::{handler::IngestHandler, server, storage::Storage};
-use braint_proto::DeviceId;
+use braint_daemon::{
+    config::{DaemonConfig, load_or_create_device_id},
+    server::{self, state::DaemonState},
+    storage::Storage,
+};
 use interprocess::local_socket::tokio::prelude::*;
 use interprocess::local_socket::{GenericFilePath, ListenerOptions};
-use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -12,29 +14,21 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    // NOTE(debt-2): unwrap_or_else is acceptable for Phase 1 but should be
-    // a proper error variant in Phase 2 when config paths are validated.
-    let runtime_dir = std::env::var_os("XDG_RUNTIME_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
-    let socket_path = runtime_dir.join("braint.sock");
-    let db_path = runtime_dir.join("braint.db");
+    let config = DaemonConfig::from_env();
 
-    // Cleanup stale socket. NOTE(debt-4): Add SIGTERM/SIGINT handler in Phase 2
-    // so the socket is removed on graceful exit, not just startup.
-    let _ = std::fs::remove_file(&socket_path);
+    std::fs::create_dir_all(&config.data_dir)?;
+    // Remove stale socket from a previous run.
+    let _ = std::fs::remove_file(&config.socket_path);
 
-    let storage = Storage::open(&db_path)?;
-    let device_id = DeviceId::generate(); // Phase 1: ephemeral; Phase 2: persisted
+    let device_id = load_or_create_device_id(&config.device_id_path)?;
+    let storage = Storage::open(&config.db_path)?;
     let clock = Clock::new(device_id);
-    let handler = IngestHandler::new(storage, clock, device_id);
+    let state = DaemonState::new(storage, clock, device_id, config.clone());
 
-    let socket_str = socket_path.to_string_lossy().to_string();
+    let socket_str = config.socket_path.to_string_lossy().to_string();
     let name = socket_str.to_fs_name::<GenericFilePath>()?;
     let listener = ListenerOptions::new().name(name).create_tokio()?;
-    tracing::info!("daemon listening on {:?}", socket_path);
 
-    // NOTE(debt-5): server::run is sequential (one connection at a time).
-    // Phase 2 TUI + CLI simultaneous use requires per-connection tasks.
-    server::run(listener, handler).await
+    tracing::info!("daemon listening on {:?}", config.socket_path);
+    server::run(listener, state).await
 }

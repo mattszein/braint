@@ -7,16 +7,24 @@ edition.workspace = true
 name = "braint"
 path = "src/main.rs"
 
+[lib]
+name = "braint_cli"
+path = "src/lib.rs"
+
 [dependencies]
 braint-client = { path = "../braint-client" }
 braint-core = { path = "../braint-core" }
 braint-proto = { path = "../braint-proto" }
+uuid = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 ratatui = { workspace = true }
-crossterm = { workspace = true }
+crossterm = { workspace = true, features = ["event-stream"] }
+futures = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+is-terminal = { workspace = true }
+libc = { workspace = true }

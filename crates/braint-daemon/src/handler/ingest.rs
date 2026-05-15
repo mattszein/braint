@@ -1,30 +1,55 @@
-use crate::storage::Storage;
-use braint_core::{Clock, parse_ingest};
-use braint_proto::{DeviceId, IngestRequest, IngestResponse, JsonRpcError};
+//! Ingest handler — parse verb, persist or pend based on source.
 
-pub struct IngestHandler {
-    storage: Storage,
-    clock: Clock,
-    device_id: DeviceId,
-}
+use crate::server::state::DaemonState;
+use braint_core::parse_verb;
+use braint_proto::{
+    ERR_PARSE, ERR_STORAGE, EntryChange, EntryId, IngestRequest, IngestResponse, JsonRpcError,
+    PendingId, Source,
+};
 
-impl IngestHandler {
-    pub fn new(storage: Storage, clock: Clock, device_id: DeviceId) -> Self {
-        Self {
-            storage,
-            clock,
-            device_id,
-        }
+/// Handle an ingest request: parse the verb, then either commit immediately or hold pending.
+///
+/// Voice-sourced entries are placed in the pending map and returned as [`IngestResponse::Pending`].
+/// All other sources are committed directly to storage.
+pub async fn handle(
+    state: &DaemonState,
+    req: IngestRequest,
+) -> Result<IngestResponse, JsonRpcError> {
+    let invocation = parse_verb(&req.text)
+        .map_err(|e| JsonRpcError::new(ERR_PARSE, format!("parse error: {e}")))?;
+
+    let hlc = state.clock.now();
+    let entry = braint_proto::Entry {
+        id: braint_proto::EntryId::generate(),
+        kind: invocation.kind,
+        body: invocation.body,
+        project: invocation.project,
+        tags: invocation.tags,
+        created_at: hlc,
+        created_on_device: state.device_id,
+        last_modified_at: hlc,
+        last_modified_on_device: state.device_id,
+    };
+
+    if req.source == Source::Voice {
+        let pending_id = PendingId::generate();
+        let preview = entry.clone();
+        state.pending.lock().await.insert(pending_id, entry);
+        return Ok(IngestResponse::Pending {
+            pending_id,
+            preview: Box::new(preview),
+        });
     }
 
-    pub fn handle(&mut self, req: IngestRequest) -> Result<IngestResponse, JsonRpcError> {
-        let hlc = self.clock.now();
-        let entry = parse_ingest(&req.text, self.device_id, hlc)
-            .map_err(|e| JsonRpcError::new(-32000, format!("parse error: {e}")))?;
-        let id = entry.id;
-        self.storage
-            .save(&entry)
-            .map_err(|e| JsonRpcError::new(-32001, format!("storage error: {e}")))?;
-        Ok(IngestResponse { entry_id: id })
-    }
+    let id: EntryId = entry.id;
+    state
+        .storage
+        .lock()
+        .await
+        .save(&entry)
+        .map_err(|e| JsonRpcError::new(ERR_STORAGE, format!("storage error: {e}")))?;
+
+    state.subs.publish(EntryChange::Created, &entry).await;
+
+    Ok(IngestResponse::Committed { entry_id: id })
 }

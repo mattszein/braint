@@ -1,6 +1,9 @@
 use rusqlite::Connection;
 
-const MIGRATIONS: &[(&str, &str)] = &[("0001_entries", include_str!("0001_entries.sql"))];
+const MIGRATIONS: &[(&str, &str)] = &[
+    ("0001_entries", include_str!("0001_entries.sql")),
+    ("0002_tags", include_str!("0002_tags.sql")),
+];
 
 pub fn run(conn: &mut Connection) -> rusqlite::Result<()> {
     conn.execute_batch("CREATE TABLE IF NOT EXISTS __migrations (name TEXT PRIMARY KEY);")?;

@@ -1,41 +1,37 @@
+use crate::output::OutputMode;
 use braint_client::Client;
-use braint_proto::{IngestRequest, JsonRpcRequest, METHOD_INGEST, Source};
+use braint_proto::{IngestRequest, IngestResponse, METHOD_INGEST, Source};
 
-pub async fn run(text: String) -> crate::error::Result<()> {
-    let socket_path = std::env::var_os("XDG_RUNTIME_DIR")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("braint.sock")
-        .to_string_lossy()
-        .to_string();
+pub async fn run(
+    verb_prefix: &str,
+    text: &str,
+    source: Source,
+    socket: &str,
+    mode: &OutputMode,
+) -> crate::error::Result<()> {
+    let full_text = format!("{verb_prefix} {text}");
 
-    let mut client = Client::connect(&socket_path)
+    let client = Client::connect(socket)
         .await
         .map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
 
-    let req = JsonRpcRequest {
-        jsonrpc: "2.0".to_string(),
-        id: 1,
-        method: METHOD_INGEST.to_string(),
-        params: IngestRequest {
-            text,
-            source: Source::Cli,
-        },
+    let req = IngestRequest {
+        text: full_text,
+        source,
     };
-
-    let resp: braint_proto::JsonRpcResponse<braint_proto::IngestResponse> = client
-        .send(&req)
+    let resp: IngestResponse = client
+        .send(METHOD_INGEST, &req)
         .await
         .map_err(|e| crate::error::CliError::Daemon(e.to_string()))?;
 
-    match resp.result {
-        Some(r) => {
-            println!("{}", r.entry_id);
+    match resp {
+        IngestResponse::Committed { entry_id } => {
+            crate::output::print_id("committed", &entry_id.to_string(), mode);
             Ok(())
         }
-        None => {
-            let msg = resp.error.map(|e| e.message).unwrap_or_default();
-            Err(crate::error::CliError::Daemon(msg))
+        IngestResponse::Pending { pending_id, .. } => {
+            crate::output::print_id("pending", &pending_id.to_string(), mode);
+            Ok(())
         }
     }
 }

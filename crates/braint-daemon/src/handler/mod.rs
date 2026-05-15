@@ -1,5 +1,8 @@
-//! Request dispatch — maps JSON-RPC method names to handlers.
+//! Request dispatch — method name to handler module.
+//!
+//! Each public module exposes free async functions that accept `&DaemonState`.
 
+pub mod confirm;
 pub mod ingest;
-
-pub use ingest::IngestHandler;
+pub mod list;
+pub mod subscribe;
