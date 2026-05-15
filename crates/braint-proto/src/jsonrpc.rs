@@ -36,6 +36,20 @@ impl JsonRpcError {
     }
 }
 
+/// Server-pushed notification (no id — per JSON-RPC 2.0 notification spec).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonRpcNotification<T> {
+    pub jsonrpc: String,
+    pub method: String,
+    pub params: T,
+}
+
+impl<T> JsonRpcNotification<T> {
+    pub fn new(method: impl Into<String>, params: T) -> Self {
+        Self { jsonrpc: "2.0".to_string(), method: method.into(), params }
+    }
+}
+
 impl<T> JsonRpcResponse<T> {
     pub fn ok(id: i64, result: T) -> Self {
         Self {

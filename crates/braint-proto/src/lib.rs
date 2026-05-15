@@ -4,10 +4,12 @@
 //! No logic, no I/O, no async.
 
 pub mod entry;
+pub mod error_codes;
 pub mod jsonrpc;
 pub mod method;
 
 pub use entry::*;
+pub use error_codes::*;
 pub use jsonrpc::*;
 pub use method::*;
 

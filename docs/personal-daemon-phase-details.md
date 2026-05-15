@@ -129,6 +129,8 @@ Read the phase before starting it. Reference it while working. Update it if you 
 **Definition of done**
 - The phase 2 demo (5 steps in the build plan) works end-to-end. The parser test suite has at least 30 cases covering all four verbs plus error cases. The TUI launches, renders, updates live, and responds to `:`-commands. Confirmation flow round-trips for voice-sourced input.
 
+**Phase 2 complete.** Grammar parser, confirmation flow, subscriptions, per-connection concurrency, CLI verb subcommands, TUI (scratch + activity panels, command line, help overlay) all implemented and tested. 49 workspace tests passing.
+
 ---
 
 ## Phase 3 — Voice via Voxtype

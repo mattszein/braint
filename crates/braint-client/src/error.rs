@@ -8,6 +8,8 @@ pub enum ClientError {
     Serde(#[from] serde_json::Error),
     #[error("daemon unreachable: {0}")]
     DaemonUnreachable(String),
+    #[error("daemon error: {0}")]
+    DaemonError(String),
 }
 
 pub type Result<T> = std::result::Result<T, ClientError>;

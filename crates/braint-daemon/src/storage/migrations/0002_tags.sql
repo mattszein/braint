@@ -1,0 +1,3 @@
+ALTER TABLE entries ADD COLUMN project TEXT;
+ALTER TABLE entries ADD COLUMN principal_tags TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE entries ADD COLUMN free_tags TEXT NOT NULL DEFAULT '[]';

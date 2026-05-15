@@ -8,6 +8,7 @@ braint-proto = { path = "../braint-proto" }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "net"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "net", "sync"] }
 interprocess = { workspace = true }
 thiserror = { workspace = true }
+futures = { workspace = true }

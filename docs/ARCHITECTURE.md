@@ -407,6 +407,78 @@ Real gotchas that surfaced during implementation. Update this as new phases teac
 
 - `#[derive(Error)]` and `#[from]` only work if the crate using them directly depends on `thiserror`. A transitive dep through another workspace crate is not enough.
 
+### Lessons from Phase 2
+
+Real gotchas and decisions from Phase 2 implementation.
+
+#### Multiplexed JSON-RPC client
+The `braint-client` `Client` now maintains background reader and writer tasks that demux frames:
+- Frames with `"id"` field → matched to pending `oneshot::Sender` by request ID
+- Frames without `"id"` (notifications) → routed by `params.subscription_id` to the subscription's `mpsc::Sender`
+This pattern enables subscriptions and regular RPCs to share a single connection. Copying the approach when adding new streaming features.
+
+#### `EntryFilter` implemented as inherent method, not trait impl
+Orphan rules prevent implementing a method on `EntryFilter` (from `braint-proto`) inside `braint-daemon`. The filter evaluation lives in `daemon::subscription::filter` as a standalone function `filter_matches(&EntryFilter, &Entry) -> bool`, not as `EntryFilter::matches`.
+
+#### `ratatui 0.30` API notes
+- `Frame` is not generic — `render(f: &mut Frame)`, not `render<B: Backend>(f: &mut Frame<B>)`.
+- `terminal.draw()` returns `Result<CompletedFrame, B::Error>` where `B::Error` is not `std::io::Error` — map via `.to_string()`.
+- `TestBackend::buffer()` returns `&Buffer`; index cells with `buffer[(x, y)]`.
+- `EventStream` requires `crossterm` feature `event-stream`.
+
+#### `[lib]` target needed for integration tests
+`braint-cli` is a binary crate. To write `crates/braint-cli/tests/` integration tests that `use braint_cli::tui::App`, the crate needs a `[lib]` target in `Cargo.toml` (pointing at `src/lib.rs`) alongside the `[[bin]]` target. Without it, `rustc` can't build the library form that tests import.
+
+#### Storage tags as JSON TEXT
+Principal and free tags are stored as JSON `TEXT` columns (not separate rows). This was the fastest path for Phase 2 where only per-entry reads are needed. Phase 4+ query-by-tag will use `json_each()` or a proper join table if performance requires. Do not change this prematurely.
+
+#### `DaemonState` is `Clone` via Arc
+`DaemonState` derives nothing — it's manually `Clone` because all fields are `Arc<…>`. `clone()` is cheap (just increments refcounts). Each connection task receives `state.clone()` in its `tokio::spawn` closure.
+
+#### Voice confirmation TTL handling
+`PendingMap::take()` returns `None` for both "not found" and "expired". The `contains()` check distinguishes these cases: present-but-expired → `ERR_TTL_EXPIRED`; absent → `ERR_NOT_FOUND`. The sweeper task is intentionally omitted in Phase 2 (memory leak is negligible for <60s entries at single-user load). Add the sweeper task in Phase 4a when plugin jobs can generate high volume.
+
+#### `idea` vs `capture` — same now, different later
+Both verbs land in scratch and look identical in Phase 2. The distinction is intentional for Phase 4b:
+
+- **`idea`** (`EntryKind::Idea`) — explicit user intent. The user consciously said "this is an idea." Always a direct CLI/TUI action.
+- **`capture`** (`EntryKind::Capture`) — the generic ingest verb used by the **capture system plugin**. Voice wrappers (`voxtype-to-daemon.sh`), eww widgets, piped stdin — all external sources funnel through `capture` so the plugin can route them to scratch or directly to a project based on context. The plugin owns the routing logic; `capture` is its entry point.
+
+In Phase 2 (no capture plugin yet), both route identically to scratch. Do not collapse them into one `EntryKind` — the type distinction drives plugin routing in Phase 4b. If you add a filter for "show only ideas" vs "show all captures from external sources," `EntryKind` is what you filter on.
+
+#### TUI: two overlapping subscriptions cause duplicate activity entries
+**What happened:** The first TUI implementation used two subscriptions — one for Scratch (all entries), one for Recent Activity (all entries since startup). When a new entry was created, both subscriptions fired. The Scratch handler already pushed to the activity panel, then the Activity subscription fired and pushed again → every new entry appeared twice in Recent Activity.
+
+**Root cause:** Both filters matched identical entries. With two subs, every new entry triggers two separate notification deliveries to the same client, and both code paths wrote to `ActivityPanel`.
+
+**Fix:** Use a single subscription (`EntryFilter::default()`). One notification per entry, one handler, updates both panels exactly once. Never subscribe to two overlapping filters and write to the same panel from both handlers.
+
+**Rule:** If two subscriptions would match the same entry, merge them into one. Keep the filter as the source of truth for what a panel shows; do the panel-routing logic client-side in a single handler.
+
+#### TUI: subscription-only feeds are empty on startup
+**What happened:** TUI panels showed nothing until a new entry was captured, even when the database had hundreds of existing entries. Subscriptions are live-push only — the daemon never replays history to a new subscriber.
+
+**Root cause:** Subscriptions fire on `Created`/`Updated`/`Deleted` events going forward. There is no "send me all matching entries that already exist" semantic in the subscription protocol. The TUI had no initial load.
+
+**Fix:** On TUI startup, call the `list` RPC before the event loop to pre-populate panels:
+- Scratch panel: `list` with `EntryFilter::default()`, limit 200, reverse order so newest is at top.
+- Activity panel: `list` with `since_ms = today_midnight_utc()`, limit 200, same order trick.
+After the initial load, subscriptions keep both panels live for new events.
+
+**Rule:** Every TUI panel that shows historical data needs both an initial `list` call (snapshot) and a subscription (live updates). Subscriptions alone only work for "show me what happens next" panels like a notification feed.
+
+---
+
+## Subscription Model
+
+Subscriptions are one-way: the server pushes `JsonRpcNotification<EntryChangeNotification>` frames to subscribed clients. No request ID — per JSON-RPC 2.0 notification spec.
+
+Server-side evaluation: the daemon evaluates `EntryFilter::matches` on every `publish()` call and only pushes to matching subscribers. Clients never receive entries they didn't ask for.
+
+Each subscription maps `SubscriptionId → mpsc::Sender<JsonRpcNotification<EntryChangeNotification>>` in `SubscriptionManager`. Channel capacity is 1024. On `try_send` error (full channel), the entry is dropped for that subscriber — slow clients miss events but don't block the daemon.
+
+Connection cleanup: `SubscriptionManager::unregister_connection(connection_id)` is called when a connection task exits, removing all subscriptions for that connection.
+
 ---
 
 ## Technical Debt Register
@@ -415,11 +487,11 @@ Debt items discovered during implementation, scheduled for cleanup. Update phase
 
 | # | Debt | Phase to fix | Reason | Current workaround |
 |---|------|-------------|--------|-------------------|
-| 1 | **Framing refactor** | 2 or 4a | Manual `read_frame`/`write_frame` is 20 lines but lacks buffering, backpressure, and stream combinators. `tokio-util::codec::LengthDelimitedCodec` or `rmcp`'s stdio transport (for plugin IPC) may replace it. | Manual framing works fine for one request/response. |
-| 2 | **Eliminate `unwrap`/`expect`** | 2 | Production code has `unwrap()` in `main.rs` (temp dir) and test helpers. Phase 2 adds config loading, verb parsing, and confirmation flows — all new failure modes that need proper handling. | Acceptable for Phase 1 skeleton; will be audited in Phase 2. |
-| 3 | **Structured error taxonomy** | 2 | Daemon errors are generic strings. CLI can't distinguish "disk full" from "bad parse." Need JSON-RPC error code ranges mapped to daemon error variants. | All errors map to `-32000` / `-32001` for now. |
-| 4 | **Socket graceful shutdown** | 2 | Daemon deletes stale socket on startup but doesn't catch `SIGTERM`/`SIGINT` to clean up on exit. | `remove_file` on startup handles dev-loop crashes. |
-| 5 | **Connection concurrency** | 2 | Phase 1 handles one connection at a time. Phase 2 TUI + CLI simultaneous use requires per-connection tasks + `Arc<Mutex<Storage>>`. | Sequential `accept()` loop. |
+| 1 | **Framing refactor** | ~~2 or 4a~~ deferred to Phase 4a (confirmed) | Manual `read_frame`/`write_frame` is 20 lines but lacks buffering, backpressure, and stream combinators. `tokio-util::codec::LengthDelimitedCodec` or `rmcp`'s stdio transport (for plugin IPC) may replace it. | Manual framing works fine for one request/response. |
+| 2 | **Eliminate `unwrap`/`expect`** | ~~2~~ resolved in Phase 2 | Production code has `unwrap()` in `main.rs` (temp dir) and test helpers. Phase 2 adds config loading, verb parsing, and confirmation flows — all new failure modes that need proper handling. | Config loading and handlers now use proper error types. |
+| 3 | **Structured error taxonomy** | ~~2~~ resolved in Phase 2 | Daemon errors are generic strings. CLI can't distinguish "disk full" from "bad parse." Need JSON-RPC error code ranges mapped to daemon error variants. | `error_codes.rs` added canonical constants; CLI output mode handles structured output. |
+| 4 | **Socket graceful shutdown** | ~~2~~ resolved in Phase 2 | Daemon deletes stale socket on startup but doesn't catch `SIGTERM`/`SIGINT` to clean up on exit. | `ctrl_c` handler added in `server::run`. |
+| 5 | **Connection concurrency** | ~~2~~ resolved in Phase 2 | Phase 1 handles one connection at a time. Phase 2 TUI + CLI simultaneous use requires per-connection tasks + `Arc<Mutex<Storage>>`. | Per-connection tasks + `Arc<Mutex<Storage>>` implemented. |
 
 ---
 

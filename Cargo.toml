@@ -40,6 +40,11 @@ uuid = { version = "1.11", features = ["v7", "serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3.14"
+directories = "5"
+toml = "0.8"
+is-terminal = "0.4"
+futures = "0.3"
+libc = "0.2"
 
 [profile.release]
 panic = "abort"
