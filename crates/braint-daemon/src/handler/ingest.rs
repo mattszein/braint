@@ -21,13 +21,12 @@ pub async fn handle(
         let current_entry = if state.plugins.verb_takes_entry_id(&invocation.verb) {
             let entry_id = parse_entry_id_from_body(&invocation.body)
                 .map_err(|e| JsonRpcError::new(ERR_PARSE, format!("expected entry ID: {e}")))?;
-            let entry = state
+            state
                 .storage
                 .lock()
                 .await
                 .get(entry_id)
-                .map_err(|e| JsonRpcError::new(ERR_STORAGE, format!("storage error: {e}")))?;
-            entry
+                .map_err(|e| JsonRpcError::new(ERR_STORAGE, format!("storage error: {e}")))?
         } else {
             None
         };

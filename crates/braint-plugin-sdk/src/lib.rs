@@ -22,9 +22,8 @@ pub mod error;
 pub mod transport;
 
 use braint_proto::{
-    JsonRpcError, JsonRpcRequest, JsonRpcResponse,
-    METHOD_PLUGIN_VERB,
-    PluginVerbRequest, PluginVerbResponse,
+    JsonRpcError, JsonRpcRequest, JsonRpcResponse, METHOD_PLUGIN_VERB, PluginVerbRequest,
+    PluginVerbResponse,
     plugin::{PluginManifest, VerbManifest},
 };
 use std::collections::HashMap;
@@ -115,27 +114,19 @@ impl Plugin {
         let mut reader = BufReader::new(stdin.lock());
         let mut writer = BufWriter::new(stdout.lock());
 
-        loop {
-            let frame = match transport::read_frame(&mut reader) {
-                Ok(f) => f,
-                Err(_) => break, // stdin closed → exit cleanly
+        while let Ok(frame) = transport::read_frame(&mut reader) {
+            let request: JsonRpcRequest<serde_json::Value> = match serde_json::from_slice(&frame) {
+                Ok(r) => r,
+                Err(e) => {
+                    let resp = JsonRpcResponse::<serde_json::Value>::err(
+                        0,
+                        JsonRpcError::new(-32700, format!("parse error: {e}")),
+                    );
+                    let _ =
+                        transport::write_frame(&mut writer, &serde_json::to_vec(&resp).unwrap());
+                    continue;
+                }
             };
-
-            let request: JsonRpcRequest<serde_json::Value> =
-                match serde_json::from_slice(&frame) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        let resp = JsonRpcResponse::<serde_json::Value>::err(
-                            0,
-                            JsonRpcError::new(-32700, format!("parse error: {e}")),
-                        );
-                        let _ = transport::write_frame(
-                            &mut writer,
-                            &serde_json::to_vec(&resp).unwrap(),
-                        );
-                        continue;
-                    }
-                };
 
             let id = request.id;
             let resp: JsonRpcResponse<serde_json::Value> = self.dispatch(id, request);
@@ -173,9 +164,7 @@ impl Plugin {
         let verb_name = plugin_req.verb.clone();
         match self.handlers.get(&verb_name) {
             Some(handler) => match handler(plugin_req) {
-                Ok(result) => {
-                    JsonRpcResponse::ok(id, serde_json::to_value(result).unwrap())
-                }
+                Ok(result) => JsonRpcResponse::ok(id, serde_json::to_value(result).unwrap()),
                 Err(msg) => JsonRpcResponse::err(id, JsonRpcError::new(-32000, msg)),
             },
             None => JsonRpcResponse::err(
