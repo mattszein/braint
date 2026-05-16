@@ -7,6 +7,7 @@ pub mod config;
 pub mod error;
 pub mod handler;
 pub mod pending;
+pub mod plugin;
 pub mod server;
 pub mod storage;
 pub mod subscription;

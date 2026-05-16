@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub const METHOD_INGEST: &str = "ingest";
+pub const METHOD_PLUGIN_VERB: &str = "plugin.verb";
 pub const METHOD_CONFIRM: &str = "confirm";
 pub const METHOD_CANCEL: &str = "cancel";
 pub const METHOD_SUBSCRIBE: &str = "subscribe";

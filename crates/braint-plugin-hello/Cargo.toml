@@ -1,0 +1,13 @@
+[package]
+name = "braint-plugin-hello"
+version = "0.1.0"
+edition.workspace = true
+
+[[bin]]
+name = "braint-plugin-hello"
+path = "src/main.rs"
+
+[dependencies]
+braint-plugin-sdk = { path = "../braint-plugin-sdk" }
+braint-proto = { path = "../braint-proto" }
+uuid = { workspace = true }

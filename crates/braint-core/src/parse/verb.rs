@@ -9,8 +9,10 @@ use crate::error::{CoreError, Result};
 /// A fully-parsed verb invocation: kind, body, optional project, and tags.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VerbInvocation {
-    /// The type of entry this invocation creates.
-    pub kind: EntryKind,
+    /// The verb name, normalized (lowercase, stripped of punctuation).
+    pub verb: String,
+    /// For built-in creation verbs: the kind. `None` for extension (plugin) verbs.
+    pub kind: Option<EntryKind>,
     /// The free-form body text.
     pub body: String,
     /// Optional project assignment.
@@ -44,7 +46,8 @@ fn has_known_prefix(token: &str) -> bool {
 /// <verb> [header-tokens]* [— | --] [body text]
 /// ```
 ///
-/// The first token (case-insensitive) selects the `EntryKind`.
+/// The first token (case-insensitive) selects the `EntryKind` for built-in verbs.
+/// For unknown verbs, `kind` is `None` and the daemon will route to a plugin.
 /// Everything between the verb and the separator (if any) is the header.
 /// Everything after the separator is the body.
 /// If there is no separator, unrecognized header tokens form the body.
@@ -60,16 +63,13 @@ pub fn parse_verb(text: &str) -> Result<VerbInvocation> {
         .chars()
         .filter(|c| !matches!(c, '.' | ',' | '-' | '_'))
         .collect();
+
     let kind = match first_normalized.as_str() {
-        "idea" => EntryKind::Idea,
-        "todo" => EntryKind::Todo,
-        "note" => EntryKind::Note,
-        "capture" => EntryKind::Capture,
-        other => {
-            return Err(CoreError::Verb(format!(
-                "unknown verb: {other}. Expected: idea, todo, note, capture"
-            )));
-        }
+        "idea" => Some(EntryKind::Idea),
+        "todo" => Some(EntryKind::Todo),
+        "note" => Some(EntryKind::Note),
+        "capture" => Some(EntryKind::Capture),
+        _ => None,
     };
 
     // Find separator index (the token that is exactly "—" or "--")
@@ -159,6 +159,7 @@ pub fn parse_verb(text: &str) -> Result<VerbInvocation> {
     };
 
     Ok(VerbInvocation {
+        verb: first_normalized,
         kind,
         body,
         project,

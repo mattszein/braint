@@ -21,6 +21,8 @@ pub struct DaemonConfig {
     pub pending_ttl_secs: u64,
     /// Maximum number of active subscriptions allowed per connection.
     pub max_subs_per_conn: usize,
+    /// Directories to scan for plugin executables. Defaults to empty (no plugins).
+    pub plugin_dirs: Vec<PathBuf>,
 }
 
 impl DaemonConfig {
@@ -44,6 +46,7 @@ impl DaemonConfig {
             data_dir,
             pending_ttl_secs: 60,
             max_subs_per_conn: 32,
+            plugin_dirs: Vec::new(),
         }
     }
 }
