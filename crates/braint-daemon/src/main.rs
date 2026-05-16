@@ -1,6 +1,7 @@
 use braint_core::Clock;
 use braint_daemon::{
     config::{DaemonConfig, load_or_create_device_id},
+    plugin::PluginManager,
     server::{self, state::DaemonState},
     storage::Storage,
 };
@@ -23,7 +24,16 @@ async fn main() -> anyhow::Result<()> {
     let device_id = load_or_create_device_id(&config.device_id_path)?;
     let storage = Storage::open(&config.db_path)?;
     let clock = Clock::new(device_id);
-    let state = DaemonState::new(storage, clock, device_id, config.clone());
+
+    // Load plugins from configured directories.
+    let plugins = PluginManager::load(&config.plugin_dirs)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!("plugin load error: {e}");
+            PluginManager::empty()
+        });
+
+    let state = DaemonState::new(storage, clock, device_id, config.clone(), plugins);
 
     let socket_str = config.socket_path.to_string_lossy().to_string();
     let name = socket_str.to_fs_name::<GenericFilePath>()?;

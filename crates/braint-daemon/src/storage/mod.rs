@@ -62,6 +62,30 @@ impl Storage {
         Ok(entries)
     }
 
+    /// Update an existing entry in the database.
+    ///
+    /// Overwrites all mutable fields for the row matching `entry.id`.
+    pub fn update(&mut self, entry: &Entry) -> crate::error::Result<()> {
+        let params = entry::bind_entry(entry);
+        self.conn.execute(
+            "UPDATE entries SET
+               kind = ?2,
+               body = ?3,
+               created_at_physical_ms = ?4,
+               created_at_logical = ?5,
+               created_on_device = ?6,
+               last_modified_at_physical_ms = ?7,
+               last_modified_at_logical = ?8,
+               last_modified_on_device = ?9,
+               project = ?10,
+               principal_tags = ?11,
+               free_tags = ?12
+             WHERE id = ?1",
+            params,
+        )?;
+        Ok(())
+    }
+
     /// Retrieve an entry by id, or `None` if it does not exist.
     pub fn get(&self, id: EntryId) -> crate::error::Result<Option<Entry>> {
         let mut stmt = self.conn.prepare(

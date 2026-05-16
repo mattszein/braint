@@ -187,6 +187,7 @@ dependencies = [
  "braint-proto",
  "directories",
  "interprocess",
+ "libc",
  "rusqlite",
  "serde",
  "serde_json",
@@ -200,13 +201,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "braint-plugin-hello"
+version = "0.1.0"
+dependencies = [
+ "braint-plugin-sdk",
+ "braint-proto",
+ "uuid",
+]
+
+[[package]]
 name = "braint-plugin-sdk"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "braint-proto",
  "serde",
  "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

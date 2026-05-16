@@ -7,4 +7,4 @@ edition.workspace = true
 braint-proto = { path = "../braint-proto" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-anyhow = { workspace = true }
+thiserror = { workspace = true }

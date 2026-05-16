@@ -1,6 +1,8 @@
+use braint_client::Client;
 use braint_core::Clock;
 use braint_daemon::{
     config::DaemonConfig,
+    plugin::PluginManager,
     server::{self, state::DaemonState},
     storage::Storage,
 };
@@ -13,17 +15,31 @@ use tokio::task::JoinHandle;
 pub struct TestDaemonHandle {
     pub socket_path: PathBuf,
     pub db_path: PathBuf,
+    pub client: Client,
     pub _task: JoinHandle<()>,
     pub _tempdir: tempfile::TempDir,
 }
 
 pub async fn spawn_test_daemon() -> TestDaemonHandle {
+    spawn_test_daemon_with_plugins(vec![]).await
+}
+
+/// Spawn a test daemon that loads plugins from the given directories.
+pub async fn spawn_test_daemon_with_plugins(plugin_dirs: Vec<PathBuf>) -> TestDaemonHandle {
     // Use short prefix to stay under UDS path limits (108 bytes on Linux)
     let tempdir = tempfile::Builder::new().prefix("b").tempdir().unwrap();
     let socket_path = tempdir.path().join("s.sock");
     let db_path = tempdir.path().join("test.db");
 
-    // Build a minimal config pointing at the temp paths.
+    let storage = Storage::open(&db_path).unwrap();
+    let device_id = DeviceId::generate();
+    let clock = Clock::new(device_id);
+
+    let plugins = PluginManager::load(&plugin_dirs).await.unwrap_or_else(|e| {
+        eprintln!("warn: plugin load error: {e}");
+        PluginManager::empty()
+    });
+
     let config = DaemonConfig {
         socket_path: socket_path.clone(),
         db_path: db_path.clone(),
@@ -31,25 +47,10 @@ pub async fn spawn_test_daemon() -> TestDaemonHandle {
         device_id_path: tempdir.path().join("device_id"),
         pending_ttl_secs: 60,
         max_subs_per_conn: 32,
+        plugin_dirs,
     };
 
-    spawn_test_daemon_with_config(config, tempdir).await
-}
-
-/// Spawn a test daemon using an explicit config. The caller must supply a
-/// `TempDir` whose lifetime will be tied to the returned handle.
-pub async fn spawn_test_daemon_with_config(
-    config: DaemonConfig,
-    tempdir: tempfile::TempDir,
-) -> TestDaemonHandle {
-    let socket_path = config.socket_path.clone();
-    let db_path = config.db_path.clone();
-
-    let storage = Storage::open(&db_path).unwrap();
-    let device_id = DeviceId::generate();
-    let clock = Clock::new(device_id);
-
-    let state = DaemonState::new(storage, clock, device_id, config);
+    let state = DaemonState::new(storage, clock, device_id, config, plugins);
 
     let socket_str = socket_path.to_string_lossy().to_string();
     let name = socket_str.to_fs_name::<GenericFilePath>().unwrap();
@@ -62,9 +63,14 @@ pub async fn spawn_test_daemon_with_config(
     // Give the server a moment to start listening.
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
+    let client = Client::connect(socket_path.to_str().unwrap())
+        .await
+        .unwrap();
+
     TestDaemonHandle {
         socket_path,
         db_path,
+        client,
         _task: task,
         _tempdir: tempdir,
     }
@@ -80,4 +86,16 @@ pub fn query_count(db_path: &PathBuf, entry_id: braint_proto::EntryId) -> i64 {
         |row| row.get(0),
     )
     .unwrap()
+}
+
+/// Returns the path to the `braint-plugin-hello` binary from the cargo target directory.
+pub fn hello_plugin_path() -> PathBuf {
+    // CARGO_MANIFEST_DIR = .../crates/braint-daemon
+    // Workspace root is two levels up.
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+    workspace_root
+        .join("target")
+        .join("debug")
+        .join("braint-plugin-hello")
 }

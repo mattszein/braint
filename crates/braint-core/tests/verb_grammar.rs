@@ -1,11 +1,11 @@
 //! Integration tests for the Phase 2 verb grammar parser.
 
-use braint_core::{VerbInvocation, parse_verb};
-use braint_proto::{EntryKind, PrincipalTag, ProjectId, TagSet};
+use braint_core::parse_verb;
+use braint_proto::{EntryKind, PrincipalTag, ProjectId};
 
 struct Case {
     input: &'static str,
-    kind: EntryKind,
+    kind: Option<EntryKind>,
     body: &'static str,
     project: Option<&'static str>,
     principal: Vec<PrincipalTag>,
@@ -43,7 +43,7 @@ fn check(case: Case) {
 fn idea_no_separator_body_from_tokens() {
     check(Case {
         input: "idea explore CRDTs",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "explore CRDTs",
         project: None,
         principal: vec![],
@@ -56,7 +56,7 @@ fn idea_no_separator_body_from_tokens() {
 fn idea_for_project_with_separator() {
     check(Case {
         input: "idea for pro-rails \u{2014} explore CRDTs",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "explore CRDTs",
         project: Some("pro-rails"),
         principal: vec![],
@@ -69,7 +69,7 @@ fn idea_for_project_with_separator() {
 fn todo_priority_when_no_separator() {
     check(Case {
         input: "todo finish parser priority:high when:today",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "finish parser",
         project: None,
         principal: vec![
@@ -85,7 +85,7 @@ fn todo_priority_when_no_separator() {
 fn todo_for_project_with_separator_and_priority() {
     check(Case {
         input: "todo for my-project \u{2014} finish auth refactor priority:high",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "finish auth refactor priority:high",
         project: Some("my-project"),
         principal: vec![],
@@ -98,7 +98,7 @@ fn todo_for_project_with_separator_and_priority() {
 fn note_for_project_with_separator() {
     check(Case {
         input: "note for pro-rails \u{2014} thoughts on architecture",
-        kind: EntryKind::Note,
+        kind: Some(EntryKind::Note),
         body: "thoughts on architecture",
         project: Some("pro-rails"),
         principal: vec![],
@@ -111,7 +111,7 @@ fn note_for_project_with_separator() {
 fn capture_no_separator() {
     check(Case {
         input: "capture try cr-sqlite",
-        kind: EntryKind::Capture,
+        kind: Some(EntryKind::Capture),
         body: "try cr-sqlite",
         project: None,
         principal: vec![],
@@ -124,7 +124,7 @@ fn capture_no_separator() {
 fn idea_case_insensitive() {
     check(Case {
         input: "IDEA explore CRDTs",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "explore CRDTs",
         project: None,
         principal: vec![],
@@ -137,7 +137,7 @@ fn idea_case_insensitive() {
 fn idea_separator_before_for() {
     check(Case {
         input: "idea \u{2014} for fun",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "for fun",
         project: None,
         principal: vec![],
@@ -150,7 +150,7 @@ fn idea_separator_before_for() {
 fn idea_hash_tags_no_separator() {
     check(Case {
         input: "idea #rust #async explore",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "explore",
         project: None,
         principal: vec![],
@@ -163,7 +163,7 @@ fn idea_hash_tags_no_separator() {
 fn idea_tags_prefix_no_separator() {
     check(Case {
         input: "idea tags:rust,async explore",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "explore",
         project: None,
         principal: vec![],
@@ -176,7 +176,7 @@ fn idea_tags_prefix_no_separator() {
 fn todo_status_when_scope_with_separator() {
     check(Case {
         input: "todo status:open when:today scope:always \u{2014} buy milk",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "buy milk",
         project: None,
         principal: vec![
@@ -193,7 +193,7 @@ fn todo_status_when_scope_with_separator() {
 fn todo_repeat_with_separator() {
     check(Case {
         input: "todo repeat:daily \u{2014} take meds",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "take meds",
         project: None,
         principal: vec![PrincipalTag::Repeat("daily".to_string())],
@@ -206,7 +206,7 @@ fn todo_repeat_with_separator() {
 fn todo_due_with_separator() {
     check(Case {
         input: "todo due:2025-01-01 \u{2014} file taxes",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "file taxes",
         project: None,
         principal: vec![PrincipalTag::Due("2025-01-01".to_string())],
@@ -219,7 +219,7 @@ fn todo_due_with_separator() {
 fn idea_only_verb() {
     check(Case {
         input: "idea",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "",
         project: None,
         principal: vec![],
@@ -232,7 +232,7 @@ fn idea_only_verb() {
 fn idea_verb_trailing_spaces() {
     check(Case {
         input: "idea   ",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "",
         project: None,
         principal: vec![],
@@ -245,7 +245,7 @@ fn idea_verb_trailing_spaces() {
 fn idea_project_prefix_with_separator() {
     check(Case {
         input: "idea project:my-project \u{2014} do thing",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "do thing",
         project: Some("my-project"),
         principal: vec![],
@@ -258,7 +258,7 @@ fn idea_project_prefix_with_separator() {
 fn idea_for_project_priority_with_separator() {
     check(Case {
         input: "idea for my-project priority:high \u{2014} do thing",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "do thing",
         project: Some("my-project"),
         principal: vec![PrincipalTag::Priority("high".to_string())],
@@ -271,7 +271,7 @@ fn idea_for_project_priority_with_separator() {
 fn note_for_project_with_separator_2() {
     check(Case {
         input: "note for pro-rails \u{2014} draft API spec",
-        kind: EntryKind::Note,
+        kind: Some(EntryKind::Note),
         body: "draft API spec",
         project: Some("pro-rails"),
         principal: vec![],
@@ -284,7 +284,7 @@ fn note_for_project_with_separator_2() {
 fn todo_separator_only() {
     check(Case {
         input: "todo \u{2014} buy milk",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "buy milk",
         project: None,
         principal: vec![],
@@ -297,7 +297,7 @@ fn todo_separator_only() {
 fn todo_no_separator_body_from_tokens() {
     check(Case {
         input: "todo buy milk",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "buy milk",
         project: None,
         principal: vec![],
@@ -310,7 +310,7 @@ fn todo_no_separator_body_from_tokens() {
 fn idea_two_word_body_no_separator() {
     check(Case {
         input: "idea hello world",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "hello world",
         project: None,
         principal: vec![],
@@ -323,7 +323,7 @@ fn idea_two_word_body_no_separator() {
 fn idea_for_known_prefix_not_project() {
     check(Case {
         input: "idea for priority:high \u{2014} do thing",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "do thing",
         project: None,
         principal: vec![PrincipalTag::Priority("high".to_string())],
@@ -336,7 +336,7 @@ fn idea_for_known_prefix_not_project() {
 fn idea_for_world_with_separator() {
     check(Case {
         input: "idea for world \u{2014} body text",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "body text",
         project: Some("world"),
         principal: vec![],
@@ -349,7 +349,7 @@ fn idea_for_world_with_separator() {
 fn idea_for_world_unrecognized_header_dropped() {
     check(Case {
         input: "idea for world hello \u{2014} body",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "body",
         project: Some("world"),
         principal: vec![],
@@ -362,7 +362,7 @@ fn idea_for_world_unrecognized_header_dropped() {
 fn idea_for_world_empty_body() {
     check(Case {
         input: "idea for world \u{2014} ",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "",
         project: Some("world"),
         principal: vec![],
@@ -375,7 +375,7 @@ fn idea_for_world_empty_body() {
 fn idea_hash_tag_with_separator() {
     check(Case {
         input: "idea #rust \u{2014} explore concurrency",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "explore concurrency",
         project: None,
         principal: vec![],
@@ -388,7 +388,7 @@ fn idea_hash_tag_with_separator() {
 fn todo_priority_empty_body() {
     check(Case {
         input: "todo priority:high \u{2014} ",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "",
         project: None,
         principal: vec![PrincipalTag::Priority("high".to_string())],
@@ -401,7 +401,7 @@ fn todo_priority_empty_body() {
 fn todo_priority_uppercase_value() {
     check(Case {
         input: "todo priority:HIGH \u{2014} do thing",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "do thing",
         project: None,
         principal: vec![PrincipalTag::Priority("HIGH".to_string())],
@@ -414,7 +414,7 @@ fn todo_priority_uppercase_value() {
 fn idea_separator_empty_body() {
     check(Case {
         input: "idea \u{2014} ",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "",
         project: None,
         principal: vec![],
@@ -427,7 +427,7 @@ fn idea_separator_empty_body() {
 fn note_for_project_body_with_spaces() {
     check(Case {
         input: "note for the-project \u{2014} remember to check logs",
-        kind: EntryKind::Note,
+        kind: Some(EntryKind::Note),
         body: "remember to check logs",
         project: Some("the-project"),
         principal: vec![],
@@ -440,7 +440,7 @@ fn note_for_project_body_with_spaces() {
 fn todo_for_project_with_separator() {
     check(Case {
         input: "todo for pro-rails \u{2014} finish auth",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "finish auth",
         project: Some("pro-rails"),
         principal: vec![],
@@ -453,7 +453,7 @@ fn todo_for_project_with_separator() {
 fn capture_for_project_hash_tag_with_separator() {
     check(Case {
         input: "capture for scratch-pad \u{2014} quick note #important",
-        kind: EntryKind::Capture,
+        kind: Some(EntryKind::Capture),
         body: "quick note #important",
         project: Some("scratch-pad"),
         principal: vec![],
@@ -461,11 +461,13 @@ fn capture_for_project_hash_tag_with_separator() {
     });
 }
 
-// Extra: unknown verb returns error
+// Unknown (plugin) verb: parses successfully with kind = None
 #[test]
-fn unknown_verb_returns_error() {
-    let err = parse_verb("foo bar").unwrap_err();
-    assert!(err.to_string().contains("unknown verb"));
+fn unknown_verb_returns_none_kind() {
+    let result = parse_verb("hello world").expect("plugin verb should parse successfully");
+    assert_eq!(result.kind, None);
+    assert_eq!(result.verb, "hello");
+    assert_eq!(result.body, "world");
 }
 
 // Verb normalization: leading/trailing punctuation stripped before match.
@@ -474,7 +476,7 @@ fn unknown_verb_returns_error() {
 fn verb_with_leading_dot_normalized() {
     check(Case {
         input: "idea. test body",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "test body",
         project: None,
         principal: vec![],
@@ -486,7 +488,7 @@ fn verb_with_leading_dot_normalized() {
 fn verb_with_trailing_comma_normalized() {
     check(Case {
         input: "todo, something important",
-        kind: EntryKind::Todo,
+        kind: Some(EntryKind::Todo),
         body: "something important",
         project: None,
         principal: vec![],
@@ -498,7 +500,7 @@ fn verb_with_trailing_comma_normalized() {
 fn verb_uppercase_normalized() {
     check(Case {
         input: "IDEA test upper",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "test upper",
         project: None,
         principal: vec![],
@@ -511,7 +513,7 @@ fn verb_uppercase_normalized() {
 fn double_dash_separator() {
     check(Case {
         input: "idea for my-project -- do thing",
-        kind: EntryKind::Idea,
+        kind: Some(EntryKind::Idea),
         body: "do thing",
         project: Some("my-project"),
         principal: vec![],
